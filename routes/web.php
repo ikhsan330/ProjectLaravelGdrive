@@ -34,6 +34,7 @@ Route::middleware(['auth', 'role:admin'])->group(function(){
 Route::middleware(['auth', 'role:dosen'])->group(function(){
     Route::get('/dosen/dashboard', [DosenController::class, 'dashboard'])->name('dosen.dashboard');
     Route::get('/dosen/dokumen/index', [DosenController::class, 'index'])->name('dosen.dokumen.index');
+    Route::get('/dosen/dokumen/create', [DosenController::class, 'create'])->name('dosen.dokumen.create');
 });
 Route::middleware(['auth', 'role:kaprodi'])->group(function(){
     Route::get('/kaprodi/dashboard', [KaprodiController::class, 'dashboard'])->name('kaprodi.dashboard');

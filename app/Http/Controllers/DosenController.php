@@ -15,4 +15,8 @@ class DosenController extends Controller
 {
     return view('dosen.dokumen.index');
 }
+public function create()
+{
+    return view('dosen.dokumen.create');
+}
 }
