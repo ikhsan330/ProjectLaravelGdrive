@@ -10,8 +10,7 @@
                     <p class="card-description">
                         Berikut adalah daftar semua pengguna yang terdaftar di sistem.
                     </p>
-                    <div class="table-responsive">
-                        {{-- Tambahkan ID unik pada tabel --}}
+                    <div class="table-responsive">  
                         <table class="table table-striped" id="usersTable">
                             <thead>
                                 <tr>
@@ -25,6 +24,7 @@
                             </thead>
                             <tbody>
                                 @forelse($users as $user)
+                                @if($user->role !== 'admin')
                                 <tr>
                                     <td>{{ $loop->iteration }}</td>
                                     <td>{{ $user->name }}</td>
@@ -42,6 +42,7 @@
                                         </form>
                                     </td>
                                 </tr>
+                                @endif
                                 @empty
                                 <tr>
                                     <td colspan="6" class="text-center">Tidak ada data pengguna.</td>

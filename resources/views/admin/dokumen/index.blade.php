@@ -5,7 +5,7 @@
 				<div class="card-body">
 					 <div class="d-flex justify-content-between align-items-center">
                         <h4 class="card-title">Daftar Dokumen</h4>
-                        <a href="#" class="btn btn-primary btn-sm">Tambah Dokumen</a>
+
                     </div>
                     <p class="card-description">
                         Berikut adalah daftar semua dokumen yang ada di sistem.
