@@ -7,16 +7,7 @@ use Illuminate\Http\Request;
 class DosenController extends Controller
 {
     public function dashboard()
-{
-    return view('dosen.dashboard');
-}
-
-    public function index()
-{
-    return view('dosen.dokumen.index');
-}
-public function create()
-{
-    return view('dosen.dokumen.create');
-}
+    {
+        return view('dosen.dashboard');
+    }
 }
