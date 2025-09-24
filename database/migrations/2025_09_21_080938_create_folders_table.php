@@ -15,7 +15,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->string('name');
-            $table->string('folder_id')->unique();
+            $table->string('folder_id');
             $table->string('parent_id')->nullable();
             $table->timestamps();
         });

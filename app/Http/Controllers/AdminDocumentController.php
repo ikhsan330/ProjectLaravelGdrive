@@ -5,59 +5,87 @@ namespace App\Http\Controllers;
 use App\Models\Document;
 use App\Models\Folder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth; // Tambahkan ini
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\FolderController;
 
-class DocumentController extends Controller
+class AdminDocumentController extends Controller
 {
     public function index()
     {
-        $userId = Auth::id(); // Ambil ID pengguna yang sedang login
         $folderController = new FolderController();
 
-        $allFolders = Folder::where('user_id', $userId)->get(); // Filter berdasarkan user_id
-        $allDocuments = Document::where('user_id', $userId)->get(); // Filter berdasarkan user_id
+        $allFolders = Folder::all();
+        $allDocuments = Document::all();
         $folders = $folderController->listFoldersRecursive();
         $foldersTree = $this->buildFolderTree($allFolders);
         $foldersWithDocuments = $this->assignDocumentsToFolders($foldersTree, $allDocuments);
 
-        return view('admin.dokumen.index', compact('folders','foldersWithDocuments'));
+        return view('admin.dokumen.index', compact('folders', 'foldersWithDocuments'));
     }
 
-        public function create()
+
+    public function create()
     {
         $folderController = new FolderController();
         $folders = $folderController->listFoldersRecursive();
         return view('dosen.dokumen.create', compact('folders'));
     }
 
-    protected function buildFolderTree($folders, $parentId = null)
+        public function store(Request $request)
     {
-        $branch = [];
-        foreach ($folders as $folder) {
-            if ($folder->parent_id === $parentId) {
-                $children = $this->buildFolderTree($folders, $folder->folder_id);
-                if ($children) {
-                    $folder->children = $children;
-                }
-                $branch[] = $folder;
-            }
+        $request->validate([
+            'file' => 'required|file',
+            'file_name' => 'required|string|max:255',
+            'folderid' => 'nullable|string',
+        ]);
+
+        $accessToken = (new TokenDriveController)->token();
+        if (!$accessToken) {
+            return back()->with('error', 'Gagal mendapatkan token akses.');
         }
-        return $branch;
+
+        $file = $request->file('file');
+        $originalFileName = $file->getClientOriginalName();
+        $filePath = $file->getPathname();
+
+        try {
+            $response = Http::withToken($accessToken)
+                ->attach(
+                    'metadata',
+                    json_encode([
+                        'name' => $originalFileName,
+                        'parents' => [$request->input('folderid')]
+                    ]),
+                    'metadata.json',
+                    ['Content-Type' => 'application/json; charset=UTF-8']
+                )
+                ->attach(
+                    'data',
+                    file_get_contents($filePath),
+                    $originalFileName,
+                    ['Content-Type' => $file->getMimeType()]
+                )
+                ->post('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart');
+
+            $response->throw();
+            $file_id = $response->json('id');
+
+            $document = new Document;
+            $document->file_name = $request->input('file_name');
+            $document->name = $originalFileName;
+            $document->fileid = $file_id;
+            $document->folderid = $request->input('folderid');
+            $document->save();
+
+            return back()->with('success', 'File berhasil diunggah ke folder yang dipilih!');
+        } catch (\Exception $e) {
+            Log::error('Gagal upload file: ' . $e->getMessage());
+            return back()->with('error', 'Upload gagal. Detail: ' . $e->getMessage());
+        }
     }
 
-    protected function assignDocumentsToFolders($foldersTree, $documents)
-    {
-        foreach ($foldersTree as $folder) {
-            $folder->documents = $documents->where('folderid', $folder->folder_id);
-            if (isset($folder->children)) {
-                $this->assignDocumentsToFolders($folder->children, $documents);
-            }
-        }
-        return $foldersTree;
-    }
 
     public function update(Request $request, $id)
     {
@@ -68,7 +96,7 @@ class DocumentController extends Controller
         ]);
 
         try {
-            $document = Document::where('user_id', Auth::id())->findOrFail($id); // Filter berdasarkan user_id
+            $document = Document::findOrFail($id); // Filter berdasarkan user_id
             $accessToken = (new TokenDriveController())->token();
             if (!$accessToken) {
                 return back()->with('error', 'Gagal mendapatkan token akses.');
@@ -133,64 +161,10 @@ class DocumentController extends Controller
         }
     }
 
-    public function store(Request $request)
-    {
-        $request->validate([
-            'file' => 'required|file',
-            'file_name' => 'required|string|max:255',
-            'folderid' => 'nullable|string',
-        ]);
-
-        $accessToken = (new TokenDriveController)->token();
-        if (!$accessToken) {
-            return back()->with('error', 'Gagal mendapatkan token akses.');
-        }
-
-        $file = $request->file('file');
-        $originalFileName = $file->getClientOriginalName();
-        $filePath = $file->getPathname();
-
-        try {
-            $response = Http::withToken($accessToken)
-                ->attach(
-                    'metadata',
-                    json_encode([
-                        'name' => $originalFileName,
-                        'parents' => [$request->input('folderid')]
-                    ]),
-                    'metadata.json',
-                    ['Content-Type' => 'application/json; charset=UTF-8']
-                )
-                ->attach(
-                    'data',
-                    file_get_contents($filePath),
-                    $originalFileName,
-                    ['Content-Type' => $file->getMimeType()]
-                )
-                ->post('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart');
-
-            $response->throw();
-            $file_id = $response->json('id');
-
-            $document = new Document;
-            $document->file_name = $request->input('file_name');
-            $document->name = $originalFileName;
-            $document->fileid = $file_id;
-            $document->folderid = $request->input('folderid');
-            $document->user_id = Auth::id(); // Simpan ID pengguna
-            $document->save();
-
-            return back()->with('success', 'File berhasil diunggah ke folder yang dipilih!');
-        } catch (\Exception $e) {
-            Log::error('Gagal upload file: ' . $e->getMessage());
-            return back()->with('error', 'Upload gagal. Detail: ' . $e->getMessage());
-        }
-    }
-
     public function show($id)
     {
         try {
-            $document = Document::where('user_id', Auth::id())->findOrFail($id); // Filter berdasarkan user_id
+            $document = Document::findOrFail($id); // Filter berdasarkan user_id
             $previewUrl = "https://drive.google.com/file/d/{$document->fileid}/view?usp=sharing";
             return redirect()->away($previewUrl);
         } catch (\Exception $e) {
@@ -202,7 +176,7 @@ class DocumentController extends Controller
     public function download($id)
     {
         try {
-            $document = Document::where('user_id', Auth::id())->findOrFail($id); // Filter berdasarkan user_id
+            $document = Document::findOrFail($id);
             $accessToken = (new TokenDriveController)->token();
             if (!$accessToken) {
                 return back()->with('error', 'Gagal mendapatkan token akses.');
@@ -233,7 +207,7 @@ class DocumentController extends Controller
     public function destroy($id)
     {
         try {
-            $document = Document::where('user_id', Auth::id())->findOrFail($id); // Filter berdasarkan user_id
+            $document = Document::findOrFail($id); // Filter berdasarkan user_id
             $accessToken = (new TokenDriveController)->token();
             if (!$accessToken) {
                 return back()->with('error', 'Gagal mendapatkan token akses.');

@@ -24,9 +24,9 @@
                             @csrf
                             <div class="modal-body">
                                 <div class="mb-3">
-                                    <label for="parent_folder" class="form-label">Pilih Folder Induk (Opsional)</label>
+                                    <label for="parent_folder" class="form-label">Pilih Folder</label>
                                     <select class="form-control" id="parent_folder" name="parent_folder">
-                                        <option value="">Folder Induk Baru (Root)</option>
+                                        {{-- <option value="">Buat Folder Baru</option> --}}
                                         @foreach ($folders as $folder)
                                             <option value="{{ $folder['id'] }}">{{ $folder['name'] }}</option>
                                         @endforeach

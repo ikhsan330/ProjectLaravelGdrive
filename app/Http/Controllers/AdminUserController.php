@@ -3,17 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Folder; // Add this line
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Log; // Add this line
 
 class AdminUserController extends Controller
 {
 
-       public function index()
+    public function index()
     {
-        $users = \App\Models\User::orderBy('created_at', 'desc')->get();
+        $users = User::orderBy('created_at', 'desc')->get();
         return view('admin.users.index', compact('users'));
     }
     public function create(): View
@@ -29,16 +31,53 @@ class AdminUserController extends Controller
             'role' => ['required', 'in:dosen,kaprodi'],
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role,
         ]);
 
-    return redirect()->route('admin.users.index')->with('success', 'User berhasil dibuat!');
+        // Check if the user's role is 'dosen'
+        if ($user->role === 'dosen') {
+            $this->createDosenFolder($user->id);
+        }
+
+        return redirect()->route('admin.users.index')->with('success', 'User berhasil dibuat!');
     }
-        public function destroy(User $user)
+
+    /**
+     * Creates a default folder for a new 'dosen' user.
+     *
+     * @param  int  $userId
+     * @return void
+     */
+    protected function createDosenFolder($userId)
+    {
+        $folderName = 'Penelitian-Pengabdian';
+        $parentFolderId = null; // Assuming this is a root-level folder
+
+        $folderController = new FolderController();
+        $newFolderId = $folderController->createFolder($folderName, $parentFolderId);
+
+        if (!$newFolderId) {
+            Log::error("Failed to create Google Drive folder for new user (ID: {$userId})");
+            return;
+        }
+
+        try {
+            $folder = new Folder;
+            $folder->name = $folderName;
+            $folder->folder_id = $newFolderId;
+            $folder->parent_id = $parentFolderId;
+            $folder->user_id = $userId;
+            $folder->save();
+        } catch (\Exception $e) {
+            Log::error("Failed to save folder record to database for user (ID: {$userId}): " . $e->getMessage());
+        }
+    }
+
+    public function destroy(User $user)
     {
         $user->delete();
         return redirect()->route('admin.users.index')->with('success', 'User berhasil dihapus!');
