@@ -10,8 +10,4 @@ class AdminController extends Controller
     {
         return view('admin.dashboard');
     }
-    public function index()
-    {
-        return view('admin.dokumen.index');
-    }
 }
