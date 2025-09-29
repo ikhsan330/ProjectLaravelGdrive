@@ -11,4 +11,10 @@ class Folder extends Model
     use HasFactory, HasUuids;
 
     protected $guarded = [];
+
+    public function documents()
+    {
+        return $this->hasMany(Document::class, 'folderid', 'folder_id');
+    }
 }
+

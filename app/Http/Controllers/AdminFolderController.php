@@ -257,21 +257,22 @@ class AdminFolderController extends Controller
     /**
      * Menampilkan isi dari folder spesifik milik dosen tertentu (dokumen dan subfolder).
      */
-    public function showDosenFolder($dosen_id, $folder_id)
-    {
-        $folder = Folder::where('user_id', $dosen_id)
-            ->where('folder_id', $folder_id)
-            ->firstOrFail();
 
-        $documents = Document::where('folderid', $folder->folder_id)->get();
+public function showDosenFolder($dosen_id, $folder_id)
+{
+    $folder = Folder::where('user_id', $dosen_id)
+        ->where('folder_id', $folder_id)
+        ->firstOrFail();
 
-        $subfolders = Folder::where('user_id', $dosen_id)
-            ->where('parent_id', $folder->folder_id)
-            ->get();
+    // INI ADALAH BARIS KUNCI
+    $documents = Document::where('folderid', $folder->folder_id)->get();
+//   dd('ID Folder yang dicari:', $folder->folder_id);
+    $subfolders = Folder::where('user_id', $dosen_id)
+        ->where('parent_id', $folder->folder_id)
+        ->get();
 
-        return view('admin.dokumen.show', compact('folder', 'documents', 'subfolders'));
-    }
-
+    return view('admin.dokumen.show', compact('folder', 'documents', 'subfolders'));
+}
     /**
      * Menyimpan struktur subfolder baru untuk dosen tertentu.
      */
@@ -383,7 +384,6 @@ class AdminFolderController extends Controller
             return back()->with('error', 'Terjadi kesalahan saat menghapus folder.');
         }
     }
-
 
       public function destroySubfolder($id)
     {

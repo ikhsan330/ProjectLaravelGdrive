@@ -2,27 +2,48 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminDocumentController;
 use App\Http\Controllers\AdminFolderController;
 use App\Http\Controllers\AdminUserController;
 
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
-    Route::get('/admin/users', [AdminUserController::class, 'index'])->name('admin.users.index');
-    Route::get('/admin/users/create', [AdminUserController::class, 'create'])->name('admin.users.create');
-    Route::post('/admin/users/create', [AdminUserController::class, 'store'])->name('admin.users.store');
-    Route::delete('/admin/users/{user}', [AdminUserController::class, 'destroy'])->name('admin.users.destroy');
+// Semua route admin dibungkus dalam middleware dan prefix group
+Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->group(function () {
 
+    // == Dashboard ==
+    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
 
-    Route::get('/admin/dokumen/index', [AdminFolderController::class, 'createFolderForm'])->name('admin.dokumen.index');
-    Route::post('/admin/folder/store', [AdminFolderController::class, 'createFolderStructure'])->name('admin.folder.store');
-    Route::get('/admin/dokumen/{dosen_id}/folder/{folder_id}', [AdminFolderController::class, 'showDosenFolder'])->name('admin.dosen.folder.show');
-    Route::put('/admin/dokumen/folder/{id}', [AdminFolderController::class, 'update'])->name('admin.folder.update');
-    Route::delete('/admin/dokumen/folder/{id}', [AdminFolderController::class, 'destroy'])->name('admin.folder.destroy');
-    Route::post('/dokumen/folder/subfolder', [AdminFolderController::class, 'storeSubfolderStructure'])->name('admin.folder.store-subfolder');
-    Route::post('/dokumen/folder/reassign', [AdminFolderController::class, 'reassignFolder'])->name('admin.folder.reassign');
-    Route::get('/dokumen/folder/{folderId}/details', [AdminFolderController::class, 'getFolderDetails'])->name('admin.folder.details');
-    Route::delete('/admin/folder/destroy-master/{folder_id}', [AdminFolderController::class, 'destroyMasterFolder'])->name('admin.folder.destroy.master');
-    // Menghapus sub-folder secara permanen dari Google Drive
+    // == Manajemen User == (Sudah Baik)
+    Route::get('/users', [AdminUserController::class, 'index'])->name('admin.users.index');
+    Route::get('/users/create', [AdminUserController::class, 'create'])->name('admin.users.create');
+    Route::post('/users', [AdminUserController::class, 'store'])->name('admin.users.store'); // Diubah dari '/users/create' agar lebih RESTful
+    Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->name('admin.users.destroy');
+
+    // =================================================================
+    // == Manajemen Folder & Dokumen
+    // =================================================================
+
+    // Halaman utama manajemen folder
+    Route::get('/dokumen', [AdminFolderController::class, 'createFolderForm'])->name('admin.dokumen.index');
+
+    // -- Aksi Terkait Folder Induk (Master Folder) --
+    Route::post('/folder', [AdminFolderController::class, 'createFolderStructure'])->name('admin.folder.store');
+    Route::post('/folder/reassign', [AdminFolderController::class, 'reassignFolder'])->name('admin.folder.reassign');
+    Route::delete('/folder/master/{folder_id}', [AdminFolderController::class, 'destroyMasterFolder'])->name('admin.folder.destroy.master');
+
+    // -- Aksi Terkait Folder Spesifik (Induk atau Sub-folder) --
+    Route::get('/folder/{dosen_id}/{folder_id}', [AdminFolderController::class, 'showDosenFolder'])->name('admin.dosen.folder.show');
+    Route::put('/folder/{id}', [AdminFolderController::class, 'update'])->name('admin.folder.update');
+    Route::delete('/folder/{id}', [AdminFolderController::class, 'destroy'])->name('admin.folder.destroy'); // Ini untuk hapus penugasan
+
+    // -- Aksi Terkait Sub-folder --
+    Route::post('/subfolder', [AdminFolderController::class, 'storeSubfolderStructure'])->name('admin.folder.store-subfolder');
     Route::delete('/subfolder/{id}', [AdminFolderController::class, 'destroySubfolder'])->name('admin.subfolder.destroy');
-});
 
+    // -- Aksi Terkait Dokumen --
+    Route::post('/dokumen', [AdminDocumentController::class, 'store'])->name('admin.dokumen.store');
+    Route::get('/dokumen/{id}', [AdminDocumentController::class, 'show'])->name('admin.dokumen.show');
+    Route::get('/dokumen/{id}/download', [AdminDocumentController::class, 'download'])->name('admin.dokumen.download');
+    Route::put('/dokumen/{id}', [AdminDocumentController::class, 'update'])->name('admin.dokumen.update');
+    Route::delete('/dokumen/{id}', [AdminDocumentController::class, 'destroy'])->name('admin.dokumen.destroy');
+    // di dalam file routes/web.php
+});
