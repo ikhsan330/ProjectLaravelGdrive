@@ -23,7 +23,6 @@ class TokenDriveController extends Controller
                 'grant_type' => 'refresh_token',
             ]);
 
-            Log::info('Google token response: ' . $response->body());
             $response->throw();
             $accessToken = $response->json('access_token');
             $expiresIn = $response->json('expires_in');

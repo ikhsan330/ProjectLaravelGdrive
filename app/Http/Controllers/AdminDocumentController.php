@@ -5,27 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Document;
 use App\Models\Folder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\FolderController;
 
 class AdminDocumentController extends Controller
 {
-    public function index()
-    {
-        $folderController = new FolderController();
-
-        $allFolders = Folder::all();
-        $allDocuments = Document::all();
-        $folders = $folderController->listFoldersRecursive();
-        $foldersTree = $this->buildFolderTree($allFolders);
-        $foldersWithDocuments = $this->assignDocumentsToFolders($foldersTree, $allDocuments);
-
-        return view('admin.dokumen.index', compact('folders', 'foldersWithDocuments'));
-    }
-
-
     public function create()
     {
         $folderController = new FolderController();

@@ -12,17 +12,25 @@ use Illuminate\Support\Facades\Auth;
 
 class AdminFolderController extends Controller
 {
-     public function createFolderForm()
+    /**
+     * Menampilkan halaman utama manajemen folder admin.
+     * Mengambil dan mengelompokkan folder untuk ditampilkan.
+     */
+    public function createFolderForm()
     {
         $folders = $this->listRootFolders();
-        $dosenFolders = $this->getAllDosenFoldersWithNames();
+
+        $dosenFoldersData = $this->getAllDosenFoldersWithNames();
+        $groupedFolders = $dosenFoldersData->groupBy('name');
+
         $dosens = User::where('role', 'dosen')->get();
-        return view('admin.dokumen.index', compact('folders', 'dosenFolders', 'dosens'));
+
+        return view('admin.dokumen.index', compact('folders', 'groupedFolders', 'dosens'));
     }
 
-
-
-
+    /**
+     * Menugaskan kembali folder yang sudah ada ke dosen lain.
+     */
     public function reassignFolder(Request $request)
     {
         $request->validate([
@@ -35,14 +43,14 @@ class AdminFolderController extends Controller
 
         // Cek apakah folder sudah ditugaskan ke dosen ini
         $existing = Folder::where('folder_id', $folderId)
-                           ->where('user_id', $dosenId)
-                           ->exists();
+            ->where('user_id', $dosenId)
+            ->exists();
 
         if ($existing) {
             return back()->with('error', 'Folder ini sudah ditugaskan ke dosen yang dipilih.');
         }
 
-        // Temukan folder induk untuk mendapatkan nama
+        // Temukan folder sumber untuk mendapatkan nama dan parent_id
         $sourceFolder = Folder::where('folder_id', $folderId)->firstOrFail();
 
         // Buat record folder baru di database
@@ -56,15 +64,15 @@ class AdminFolderController extends Controller
         return back()->with('success', 'Folder berhasil ditugaskan kembali ke dosen.');
     }
 
-
-
-    // Metode untuk mengambil hanya folder induk
+    /**
+     * Mengambil daftar semua folder induk yang unik untuk digunakan di dropdown.
+     */
     public function listRootFolders()
     {
-        $userId = Auth::id();
-        $folders = Folder::where('user_id', $userId)
-                         ->whereNull('parent_id') // Hanya ambil folder dengan parent_id null
-                         ->get();
+        $folders = Folder::whereNull('parent_id')
+            ->select('folder_id', 'name')
+            ->distinct()
+            ->get();
 
         $result = [];
         foreach ($folders as $folder) {
@@ -76,123 +84,107 @@ class AdminFolderController extends Controller
         return $result;
     }
 
+    /**
+     * Mengambil semua folder induk milik dosen beserta nama dosennya.
+     */
     public function getAllDosenFoldersWithNames()
     {
         $dosenFolders = Folder::select('folders.*', 'users.name as user_name')
             ->join('users', 'folders.user_id', '=', 'users.id')
             ->where('users.role', 'dosen')
-            ->whereNull('folders.parent_id') // Filter untuk hanya folder induk
+            ->whereNull('folders.parent_id')
+            ->orderBy('folders.name') // Urutkan berdasarkan nama folder
+            ->orderBy('users.name')   // Lalu urutkan berdasarkan nama dosen
             ->get();
 
         return $dosenFolders;
     }
 
-    public function listFoldersRecursive($parentId = null, $prefix = '')
-    {
-        $isAdmin = Auth::user()->role === 'admin';
-
-        if ($isAdmin) {
-            $folders = Folder::join('users', 'folders.user_id', '=', 'users.id')
-                             ->where('users.role', 'dosen')
-                             ->where('folders.parent_id', $parentId)
-                             ->select('folders.*')
-                             ->get();
-        } else {
-            $userId = Auth::id();
-            $folders = Folder::where('user_id', $userId)
-                             ->where('parent_id', $parentId)
-                             ->get();
-        }
-
-        $result = [];
-        foreach ($folders as $folder) {
-            $result[] = [
-                'id' => $folder->folder_id,
-                'name' => $prefix . $folder->name,
-            ];
-
-            $children = $this->listFoldersRecursive($folder->folder_id, $prefix . $folder->name . '/');
-            $result = array_merge($result, $children);
-        }
-
-        return $result;
-    }
-
-
+    /**
+     * Membuat struktur folder baru, baik untuk semua dosen (oleh admin)
+     * atau untuk diri sendiri (oleh dosen).
+     */
     public function createFolderStructure(Request $request)
     {
         $request->validate([
             'folder_name' => 'required|string',
-            'parent_folder' => 'nullable|string',
+            'parent_folder' => 'nullable|string', // Dibiarkan untuk kompatibilitas jika ada
         ]);
 
         $user = Auth::user();
         $folderName = trim($request->input('folder_name'));
-        $parentFolderId = $request->input('parent_folder');
+        $parentFolderId = $request->input('parent_folder'); // Ini untuk subfolder, bukan dari modal utama
 
+        // Jika admin membuat folder induk baru dari modal utama
         if ($user->role === 'admin' && empty($parentFolderId)) {
             $dosens = User::where('role', 'dosen')->get();
 
+            // Cek apakah nama folder sudah ada untuk salah satu dosen
             $existingFolderForDosen = Folder::where('name', $folderName)
-                                            ->where('parent_id', $parentFolderId)
-                                            ->whereIn('user_id', $dosens->pluck('id'))
-                                            ->first();
+                ->whereNull('parent_id')
+                ->whereIn('user_id', $dosens->pluck('id'))
+                ->exists();
 
             if ($existingFolderForDosen) {
-                return back()->with('error', 'Gagal membuat folder. Nama folder sudah ada untuk salah satu dosen.');
+                return back()->with('error', 'Gagal membuat folder. Nama folder sudah ada.');
             }
 
-            $newFolderId = $this->createFolder($folderName, $parentFolderId);
+            // Buat satu folder di Google Drive
+            $newFolderId = $this->createFolder($folderName, null);
             if (!$newFolderId) {
                 return back()->with('error', 'Gagal membuat folder baru di Google Drive.');
             }
 
+            // Simpan record folder ini untuk setiap dosen
             foreach ($dosens as $dosen) {
                 $folder = new Folder;
                 $folder->name = $folderName;
                 $folder->folder_id = $newFolderId;
-                $folder->parent_id = $parentFolderId;
+                $folder->parent_id = null;
                 $folder->user_id = $dosen->id;
                 $folder->save();
             }
 
             return back()->with('success', 'Folder "' . $folderName . '" berhasil dibuat dan ditugaskan ke semua dosen!');
-
-        } else {
-            $userId = $user->id;
-
-            $existingFolder = Folder::where('name', $folderName)
-                ->where('parent_id', $parentFolderId)
-                ->where('user_id', $userId)
-                ->first();
-
-            if ($existingFolder) {
-                return back()->with('error', 'Gagal membuat folder. Nama folder sudah ada di dalam folder induk yang dipilih.');
-            }
-
-            $newFolderId = $this->createFolder($folderName, $parentFolderId);
-
-            if (!$newFolderId) {
-                return back()->with('error', 'Gagal membuat folder baru.');
-            }
-
-            $folder = new Folder;
-            $folder->name = $folderName;
-            $folder->folder_id = $newFolderId;
-            $folder->parent_id = $parentFolderId;
-            $folder->user_id = $userId;
-            $folder->save();
-
-            return back()->with('success', 'Folder "' . $folderName . '" berhasil dibuat dan disimpan!');
         }
+
+        // Logika untuk membuat subfolder atau folder oleh non-admin
+        $userId = $user->id;
+        $existingFolder = Folder::where('name', $folderName)
+            ->where('parent_id', $parentFolderId)
+            ->where('user_id', $userId)
+            ->exists();
+
+        if ($existingFolder) {
+            return back()->with('error', 'Gagal membuat folder. Nama folder sudah ada di dalam folder induk yang dipilih.');
+        }
+
+        $newFolderId = $this->createFolder($folderName, $parentFolderId);
+        if (!$newFolderId) {
+            return back()->with('error', 'Gagal membuat folder baru.');
+        }
+
+        $folder = new Folder;
+        $folder->name = $folderName;
+        $folder->folder_id = $newFolderId;
+        $folder->parent_id = $parentFolderId;
+        $folder->user_id = $userId;
+        $folder->save();
+
+        return back()->with('success', 'Folder "' . $folderName . '" berhasil dibuat dan disimpan!');
     }
 
+    /**
+     * Helper method untuk membuat folder di Google Drive via API.
+     */
     public function createFolder($folderName, $parentId = null)
     {
         $accessToken = (new TokenDriveController)->token();
         if (!$accessToken) {
+            Log::error('Gagal mendapatkan token akses Google Drive.');
             return null;
         }
+
         $folderMetadata = [
             'name' => $folderName,
             'mimeType' => 'application/vnd.google-apps.folder'
@@ -201,6 +193,7 @@ class AdminFolderController extends Controller
         if ($parentId) {
             $folderMetadata['parents'] = [$parentId];
         }
+
         try {
             $response = Http::withToken($accessToken)
                 ->post('https://www.googleapis.com/drive/v3/files', $folderMetadata);
@@ -212,6 +205,9 @@ class AdminFolderController extends Controller
         }
     }
 
+    /**
+     * Memperbarui nama folder di Google Drive dan di database lokal.
+     */
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -225,53 +221,61 @@ class AdminFolderController extends Controller
                 return back()->with('error', 'Gagal mendapatkan token akses.');
             }
 
-            $response = Http::withToken($accessToken)
+            // Update nama di Google Drive
+            Http::withToken($accessToken)
                 ->patch("https://www.googleapis.com/drive/v3/files/{$folder->folder_id}", [
                     'name' => $request->input('folder_name')
-                ]);
+                ])->throw();
 
-            $response->throw();
-
-            Folder::where('folder_id', $folder->folder_id)->update(['name' => $request->input('folder_name')]);
+            // Update nama di semua record database yang memiliki folder_id yang sama
+            Folder::where('folder_id', $folder->folder_id)
+                  ->update(['name' => $request->input('folder_name')]);
 
             return back()->with('success', 'Nama folder berhasil diperbarui.');
         } catch (\Exception $e) {
-            return back()->with('error', 'Terjadi kesalahan saat memperbarui folder. Detail: ' . $e->getMessage());
+            Log::error('Error saat update folder: ' . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan saat memperbarui folder.');
         }
     }
 
+    /**
+     * Menghapus penugasan folder dari seorang dosen (hanya dari database).
+     */
     public function destroy($id)
     {
         try {
             $folder = Folder::findOrFail($id);
             $folder->delete();
 
-            return back()->with('success', 'Folder berhasil dihapus dari dosen.');
+            return back()->with('success', 'Penugasan folder berhasil dihapus dari dosen.');
         } catch (\Exception $e) {
             Log::error('Gagal menghapus folder: ' . $e->getMessage());
-            return back()->with('error', 'Terjadi kesalahan saat menghapus folder. Detail: ' . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan saat menghapus penugasan folder.');
         }
     }
 
+    /**
+     * Menampilkan isi dari folder spesifik milik dosen tertentu (dokumen dan subfolder).
+     */
     public function showDosenFolder($dosen_id, $folder_id)
     {
-        // Pastikan folder ini benar-benar milik dosen yang dipilih
         $folder = Folder::where('user_id', $dosen_id)
-                        ->where('folder_id', $folder_id)
-                        ->firstOrFail();
+            ->where('folder_id', $folder_id)
+            ->firstOrFail();
 
-        // Ambil semua dokumen di dalam folder tersebut
         $documents = Document::where('folderid', $folder->folder_id)->get();
 
-        // Ambil semua sub-folder di dalam folder ini
         $subfolders = Folder::where('user_id', $dosen_id)
-                            ->where('parent_id', $folder->folder_id)
-                            ->get();
+            ->where('parent_id', $folder->folder_id)
+            ->get();
 
         return view('admin.dokumen.show', compact('folder', 'documents', 'subfolders'));
     }
 
-     public function storeSubfolderStructure(Request $request)
+    /**
+     * Menyimpan struktur subfolder baru untuk dosen tertentu.
+     */
+    public function storeSubfolderStructure(Request $request)
     {
         $request->validate([
             'folder_name' => 'required|string',
@@ -284,15 +288,15 @@ class AdminFolderController extends Controller
         $dosenId = $request->input('parent_dosen_id');
 
         // Pastikan folder induk ada di database untuk dosen ini
-        $parentFolder = Folder::where('folder_id', $parentFolderId)
-                              ->where('user_id', $dosenId)
-                              ->firstOrFail();
+        Folder::where('folder_id', $parentFolderId)
+            ->where('user_id', $dosenId)
+            ->firstOrFail();
 
         // Cek duplikasi sub-folder
         $existingFolder = Folder::where('name', $folderName)
-                                ->where('parent_id', $parentFolderId)
-                                ->where('user_id', $dosenId)
-                                ->first();
+            ->where('parent_id', $parentFolderId)
+            ->where('user_id', $dosenId)
+            ->exists();
 
         if ($existingFolder) {
             return back()->with('error', 'Gagal membuat folder. Nama folder sudah ada di dalam folder induk ini.');
@@ -315,4 +319,108 @@ class AdminFolderController extends Controller
         return back()->with('success', 'Sub-folder "' . $folderName . '" berhasil dibuat dan disimpan!');
     }
 
+    /**
+     * Metode ini tidak digunakan di alur utama halaman admin,
+     * tetapi mungkin digunakan di tempat lain.
+     */
+    public function listFoldersRecursive($parentId = null, $prefix = '')
+    {
+        $isAdmin = Auth::user()->role === 'admin';
+
+        if ($isAdmin) {
+            $folders = Folder::join('users', 'folders.user_id', '=', 'users.id')
+                ->where('users.role', 'dosen')
+                ->where('folders.parent_id', $parentId)
+                ->select('folders.*')
+                ->get();
+        } else {
+            $userId = Auth::id();
+            $folders = Folder::where('user_id', $userId)
+                ->where('parent_id', $parentId)
+                ->get();
+        }
+
+        $result = [];
+        foreach ($folders as $folder) {
+            $result[] = [
+                'id' => $folder->folder_id,
+                'name' => $prefix . $folder->name,
+            ];
+
+            $children = $this->listFoldersRecursive($folder->folder_id, $prefix . $folder->name . '/');
+            $result = array_merge($result, $children);
+        }
+
+        return $result;
+    }
+
+    public function destroyMasterFolder($folder_id)
+    {
+        try {
+            $accessToken = (new TokenDriveController)->token();
+            if (!$accessToken) {
+                return back()->with('error', 'Gagal mendapatkan token akses.');
+            }
+
+            // Langkah 1: Hapus folder dari Google Drive
+            Http::withToken($accessToken)
+                ->delete("https://www.googleapis.com/drive/v3/files/{$folder_id}")
+                ->throw(); // Akan melempar exception jika gagal
+
+            // Langkah 2: Hapus semua record folder dari database lokal
+            Folder::where('folder_id', $folder_id)->delete();
+
+            return back()->with('success', 'Folder dan semua penugasannya berhasil dihapus secara permanen.');
+
+        } catch (\Exception $e) {
+            Log::error('Gagal menghapus folder master: ' . $e->getMessage());
+            // Cek jika error karena file tidak ditemukan (mungkin sudah dihapus manual)
+            if ($e instanceof \Illuminate\Http\Client\RequestException && $e->response->status() == 404) {
+                // Jika folder tidak ditemukan di Drive, tetap hapus dari DB
+                Folder::where('folder_id', $folder_id)->delete();
+                return back()->with('success', 'Folder tidak ditemukan di Google Drive, tetapi berhasil dihapus dari database.');
+            }
+            return back()->with('error', 'Terjadi kesalahan saat menghapus folder.');
+        }
+    }
+
+
+      public function destroySubfolder($id)
+    {
+        try {
+            // 1. Temukan record sub-folder di database
+            $subfolder = Folder::findOrFail($id);
+
+            // Pastikan ini adalah sub-folder (memiliki parent_id)
+            if (is_null($subfolder->parent_id)) {
+                return back()->with('error', 'Aksi ini hanya untuk sub-folder.');
+            }
+
+            $accessToken = (new TokenDriveController)->token();
+            if (!$accessToken) {
+                return back()->with('error', 'Gagal mendapatkan token akses.');
+            }
+
+            // 2. Hapus folder dari Google Drive
+            Http::withToken($accessToken)
+                ->delete("https://www.googleapis.com/drive/v3/files/{$subfolder->folder_id}")
+                ->throw();
+
+            // 3. Hapus record dari database lokal
+            $subfolder->delete();
+
+            return back()->with('success', 'Sub-folder berhasil dihapus secara permanen.');
+
+        } catch (\Exception $e) {
+            Log::error('Gagal menghapus sub-folder: ' . $e->getMessage());
+
+            if ($e instanceof \Illuminate\Http\Client\RequestException && $e->response->status() == 404) {
+                // Jika folder tidak ada di Drive, paksa hapus dari DB
+                Folder::findOrFail($id)->delete();
+                return back()->with('success', 'Sub-folder tidak ditemukan di Google Drive, tetapi berhasil dihapus dari database.');
+            }
+
+            return back()->with('error', 'Terjadi kesalahan saat menghapus sub-folder.');
+        }
+    }
 }
