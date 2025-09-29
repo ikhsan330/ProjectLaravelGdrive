@@ -10,7 +10,7 @@
                     <p class="card-description">
                         Berikut adalah daftar semua pengguna yang terdaftar di sistem.
                     </p>
-                    <div class="table-responsive">  
+                    <div class="table-responsive">
                         <table class="table table-striped" id="usersTable">
                             <thead>
                                 <tr>
@@ -58,10 +58,9 @@
 
     @push('scripts')
     <script>
-        const dataTable = new simpleDatatables.DataTable("#usersTable", {
-            searchable: true,
-            fixedHeight: true,
-        });
+         $(document).ready(function() {
+        $('#usersTable').DataTable();
+    });
     </script>
     @endpush
 </x-app-layout>

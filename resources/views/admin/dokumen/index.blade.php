@@ -11,7 +11,7 @@
                         Berikut adalah daftar semua dokumen yang ada di sistem.
                     </p>
 					<div class="table-responsive">
-						<table class="table table-striped" id="datatable-dokumen">
+						<table class="table table-striped" id="tabel-dokumen">
 							<thead>
 								<tr>
 									<th>No</th>
@@ -48,11 +48,9 @@
 	</div>
      @push('scripts')
 	<script>
-
-        const dataTable = new simpleDatatables.DataTable("#datatable-dokumen", {
-            searchable: true,
-            fixedHeight: true,
-        });
+    $(document).ready(function() {
+        $('#tabel-dokumen').DataTable();
+    });
 	</script>
      @endpush
 </x-app-layout>
