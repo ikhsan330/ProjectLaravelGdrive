@@ -95,6 +95,9 @@
                                 </div>
                             </div>
                         </div>
+                            <div class="absolute -top-4 -right-4 w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl opacity-80 animate-pulse"></div>
+
+                        <div class="absolute -bottom-6 -left-6 w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full opacity-60 animate-bounce"></div>
                     </div>
                 </div>
             </div>
