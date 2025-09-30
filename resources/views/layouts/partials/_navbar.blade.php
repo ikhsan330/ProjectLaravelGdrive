@@ -59,18 +59,6 @@
             <input type="text" class="form-control">
           </div>
         </li>
-        <li class="nav-item dropdown">
-          <a class="nav-link count-indicator" id="countDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="icon-bell"></i>
-            <span class="count"></span>
-          </a>
-          <div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list pb-0" aria-labelledby="countDropdown">
-            <a class="dropdown-item py-3">
-              <p class="mb-0 font-weight-medium float-left">You have 7 unread mails </p>
-              <span class="badge badge-pill badge-primary float-right">View all</span>
-            </a>
-            </div>
-        </li>
         @auth
 <li class="nav-item dropdown user-dropdown">
     <a class="nav-link" id="UserDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false">

@@ -18,61 +18,60 @@ class AdminDocumentController extends Controller
         return view('dosen.dokumen.create', compact('folders'));
     }
 
-// app/Http/Controllers/AdminDocumentController.php
+    public function store(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file',
+            'file_name' => 'required|string|max:255',
+            'folderid' => 'required|string',
+            'user_id' => 'required|exists:users,id', // TAMBAHKAN VALIDASI INI
+        ]);
 
-public function store(Request $request)
-{
-    $request->validate([
-        'file' => 'required|file',
-        'file_name' => 'required|string|max:255',
-        'folderid' => 'required|string',
-        'user_id' => 'required|exists:users,id', // TAMBAHKAN VALIDASI INI
-    ]);
-
-    $accessToken = (new TokenDriveController)->token();
-    if (!$accessToken) {
-        return back()->with('error', 'Gagal mendapatkan token akses.');
-    }
-
-    $file = $request->file('file');
-    $originalFileName = $file->getClientOriginalName();
-    $filePath = $file->getPathname();
-    $folderId = $request->input('folderid');
-
-    try {
-        $metadata = ['name' => $originalFileName];
-        if ($folderId) {
-            $metadata['parents'] = [$folderId];
+        $accessToken = (new TokenDriveController)->token();
+        if (!$accessToken) {
+            return back()->with('error', 'Gagal mendapatkan token akses.');
         }
 
-        $response = Http::withToken($accessToken)
-            ->attach(
-                'metadata',
-                json_encode($metadata), 'metadata.json',
-                ['Content-Type' => 'application/json; charset=UTF-8']
-            )
-            ->attach('data', file_get_contents($filePath), $originalFileName)
-            ->post('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart');
+        $file = $request->file('file');
+        $originalFileName = $file->getClientOriginalName();
+        $filePath = $file->getPathname();
+        $folderId = $request->input('folderid');
 
-        $response->throw();
-        $file_id = $response->json('id');
+        try {
+            $metadata = ['name' => $originalFileName];
+            if ($folderId) {
+                $metadata['parents'] = [$folderId];
+            }
 
-        $document = new Document;
-        $document->file_name = $request->input('file_name');
-        $document->name = $originalFileName;
-        $document->fileid = $file_id;
-        $document->folderid = $folderId;
-        $document->user_id = $request->input('user_id'); // <-- TAMBAHKAN BARIS INI
-        $document->save();
+            $response = Http::withToken($accessToken)
+                ->attach(
+                    'metadata',
+                    json_encode($metadata),
+                    'metadata.json',
+                    ['Content-Type' => 'application/json; charset=UTF-8']
+                )
+                ->attach('data', file_get_contents($filePath), $originalFileName)
+                ->post('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart');
 
-        return back()->with('success', 'File berhasil diunggah!');
-    } catch (\Exception $e) {
-        Log::error('Gagal upload file: ' . $e->getMessage());
-        return back()->with('error', 'Upload gagal. Detail: ' . $e->getMessage());
+            $response->throw();
+            $file_id = $response->json('id');
+
+            $document = new Document;
+            $document->file_name = $request->input('file_name');
+            $document->name = $originalFileName;
+            $document->fileid = $file_id;
+            $document->folderid = $folderId;
+            $document->user_id = $request->input('user_id'); // <-- TAMBAHKAN BARIS INI
+            $document->save();
+
+            return back()->with('success', 'File berhasil diunggah!');
+        } catch (\Exception $e) {
+            Log::error('Gagal upload file: ' . $e->getMessage());
+            return back()->with('error', 'Upload gagal. Detail: ' . $e->getMessage());
+        }
     }
-}
 
-   public function update(Request $request, $id)
+    public function update(Request $request, $id)
     {
         $request->validate([
             'file_name' => 'required|string|max:255',
@@ -114,7 +113,7 @@ public function store(Request $request)
                 // 2. Hapus file lama dari Google Drive (jika upload baru berhasil)
                 Http::withToken($accessToken)
                     ->delete("https://www.googleapis.com/drive/v3/files/{$document->fileid}");
-                    // Kita tidak menggunakan throw() di sini agar proses lanjut mesmo error
+                // Kita tidak menggunakan throw() di sini agar proses lanjut mesmo error
 
                 // 3. Perbarui database dengan info file baru
                 $document->fileid = $newFileId;
@@ -124,7 +123,7 @@ public function store(Request $request)
             // Perbarui nama custom file di Google Drive agar sesuai dengan sistem
             // (Hanya jika tidak ada file baru yang diupload, untuk menghindari request ganda)
             if (!$request->hasFile('file') && $document->file_name !== $request->input('file_name')) {
-                 Http::withToken($accessToken)
+                Http::withToken($accessToken)
                     ->patch("https://www.googleapis.com/drive/v3/files/{$document->fileid}", [
                         'name' => $request->input('file_name')
                     ]);
@@ -136,7 +135,6 @@ public function store(Request $request)
             $document->save();
 
             return back()->with('success', 'Dokumen berhasil diperbarui!');
-
         } catch (\Exception $e) {
             Log::error('Gagal memperbarui dokumen: ' . $e->getMessage());
             return back()->with('error', 'Terjadi kesalahan saat memperbarui dokumen.');

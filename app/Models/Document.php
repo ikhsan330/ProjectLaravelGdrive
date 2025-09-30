@@ -10,5 +10,12 @@ class Document extends Model
 {
     use HasFactory, HasUuids;
     protected $guarded = [];
-
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+    public function folder()
+    {
+        return $this->belongsTo(Folder::class, 'folderid', 'folder_id');
+    }
 }

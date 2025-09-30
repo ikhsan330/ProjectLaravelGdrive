@@ -21,11 +21,11 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-    'name',
-    'email',
-    'password',
-    'role',
-    'photo',
+        'name',
+        'email',
+        'password',
+        'role',
+        'photo',
     ];
 
     /**
@@ -49,5 +49,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+    public function folders()
+    {
+        return $this->hasMany(Folder::class, 'user_id');
     }
 }

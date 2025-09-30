@@ -18,10 +18,12 @@ class AdminUserController extends Controller
         $users = User::orderBy('created_at', 'desc')->get();
         return view('admin.users.index', compact('users'));
     }
-    public function create(): View
+
+    public function create()
     {
         return view('admin.users.create');
     }
+
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
@@ -46,12 +48,6 @@ class AdminUserController extends Controller
         return redirect()->route('admin.users.index')->with('success', 'User berhasil dibuat!');
     }
 
-    /**
-     * Creates a default folder for a new 'dosen' user.
-     *
-     * @param  int  $userId
-     * @return void
-     */
     protected function createDosenFolder($userId)
     {
         $folderName = 'Penelitian-Pengabdian';

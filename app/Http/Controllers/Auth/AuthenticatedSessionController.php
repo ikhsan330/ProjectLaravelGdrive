@@ -29,7 +29,7 @@ class AuthenticatedSessionController extends Controller
         // Use the underlying Illuminate\Http\Request for session
         request()->session()->regenerate();
 
-            $url = "dashboard";
+            $url = "/";
 
             if (Auth::user()->role == "admin") {
                 $url = "admin/dashboard";

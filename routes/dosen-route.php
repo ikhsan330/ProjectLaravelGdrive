@@ -1,23 +1,26 @@
 <?php
-use Illuminate\Support\Facades\Route;
+
 use App\Http\Controllers\DosenController;
-use App\Http\Controllers\DocumentController;
-use App\Http\Controllers\FolderController;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\DosenFolderController;
+use App\Http\Controllers\DosenDocumentController;
 
-Route::middleware(['auth', 'role:dosen'])->group(function () {
-    Route::get('/dosen/dashboard', [DosenController::class, 'dashboard'])->name('dosen.dashboard');
+Route::middleware(['auth', 'role:dosen'])->prefix('dosen')->group(function () {
+   Route::get('/dashboard',[DosenController::class,'dashboard'])->name('dosen.dashboard');
 
-    Route::get('/dosen/dokumen/index', [DocumentController::class, 'index'])->name('dosen.dokumen.index');
-    Route::get('/dosen/dokumen/create', [DocumentController::class, 'create'])->name('dosen.dokumen.create');
-    Route::post('/dosen/dokumen/store', [DocumentController::class, 'store'])->name('dosen.dokumen.store');
-    Route::get('/dosen/dokumen/{id}/show', [DocumentController::class, 'show'])->name('dosen.dokumen.show');
-    Route::get('/dosen/dokumen/{id}/download', [DocumentController::class, 'download'])->name('dosen.dokumen.download');
-    Route::delete('/dosen/dokumen/{id}/destroy', [DocumentController::class, 'destroy'])->name('dosen.dokumen.destroy');
-    Route::put('/dosen/dokumen/{id}', [DocumentController::class, 'update'])->name('dosen.dokumen.update');
+    // Route untuk Folder
+    Route::get('/dokumen', [DosenFolderController::class, 'index'])->name('dosen.dokumen.index');
+    Route::get('/dokumen/{folder_id}', [DosenFolderController::class, 'show'])->name('dosen.folder.show');
+    Route::post('/dokumen/subfolder', [DosenFolderController::class, 'storeSubfolder'])->name('dosen.folder.store-subfolder');
+    Route::put('/dokumen/{id}', [DosenFolderController::class, 'update'])->name('dosen.folder.update');
+    Route::delete('/dokumen/subfolder/{id}', [DosenFolderController::class, 'destroySubfolder'])->name('dosen.folder.destroy');
 
-    Route::post('/dosen/folder/store', [FolderController::class, 'createFolderStructure'])->name('dosen.folder.store');
-    Route::put('/dosen/folder/{id}/update', [FolderController::class, 'update'])->name('dosen.folder.update');
-    Route::delete('/dosen/folder/{id}/destroy', [FolderController::class, 'destroy'])->name('dosen.folder.destroy');
+    // Anda mungkin perlu membuat DosenDocumentController atau menyesuaikan yang ada.
+    Route::post('/dokumen', [DosenDocumentController::class, 'store'])->name('dosen.document.store');
+    Route::get('/dokumen/{id}/show', [DosenDocumentController::class, 'show'])->name('dosen.document.show');
+    Route::get('/dokumen/{id}/download', [DosenDocumentController::class, 'download'])->name('dosen.document.download');
+    Route::put('/dokumen/{id}/update', [DosenDocumentController::class, 'update'])->name('dosen.document.update');
+    Route::delete('/dokumen/{id}/destroy', [DosenDocumentController::class, 'destroy'])->name('dosen.document.destroy');
 });
 
 

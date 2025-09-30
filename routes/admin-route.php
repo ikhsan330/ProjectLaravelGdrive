@@ -7,7 +7,7 @@ use App\Http\Controllers\AdminFolderController;
 use App\Http\Controllers\AdminUserController;
 
 // Semua route admin dibungkus dalam middleware dan prefix group
-Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->group(function () {
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
 
     // == Dashboard ==
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');

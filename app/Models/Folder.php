@@ -16,5 +16,15 @@ class Folder extends Model
     {
         return $this->hasMany(Document::class, 'folderid', 'folder_id');
     }
+
+    public function subfolders()
+    {
+        return $this->hasMany(Folder::class, 'parent_id', 'folder_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
 
