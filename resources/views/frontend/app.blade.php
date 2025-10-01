@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="{{ asset('css/welcome.css') }}">
 
     <link rel="shortcut icon" href="{{ asset('images/favicon.ico') }}" />
+
 </head>
 
 <body class="font-inter bg-gray-50 min-h-screen overflow-x-hidden">

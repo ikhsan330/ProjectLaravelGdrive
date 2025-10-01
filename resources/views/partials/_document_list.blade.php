@@ -14,7 +14,6 @@
 
 @if($documents->isNotEmpty())
 <ul class="space-y-3">
-    {{-- PERBAIKAN: Perulangan harus menggunakan variabel $documents --}}
     @foreach($documents as $document)
         @php
             $extension = strtolower(pathinfo($document->file_name, PATHINFO_EXTENSION));
@@ -34,6 +33,7 @@
     <li>
         <a href="#" class="flex items-center p-4 rounded-xl hover:bg-gray-50 transition-colors duration-200 border group">
             <svg class="w-10 h-10 mr-4 shrink-0 {{ $icon_color }}" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icon_path }}" /></svg>
+
             <div class="flex-grow">
                 <p class="font-semibold text-gray-800 group-hover:text-blue-600">{{ $document->name ?? 'Tanpa Judul' }}</p>
                 <div class="flex items-center text-sm text-gray-500 mt-1">
@@ -42,6 +42,23 @@
                     <span>{{ \Carbon\Carbon::parse($document->created_at)->format('d M Y') }}</span>
                 </div>
             </div>
+
+            {{-- ======================= TAMBAHKAN BLOK INI UNTUK STATUS VERIFIKASI ======================= --}}
+            <div class="flex-shrink-0 mx-4">
+                @if($document->verified)
+                    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="h-3 w-3"><path fill-rule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.35 2.35 4.493-6.74a.75.75 0 0 1 1.04-.208Z" clip-rule="evenodd" /></svg>
+                        Terverifikasi
+                    </span>
+                @else
+                    <span class="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-800">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="h-3 w-3"><path fill-rule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm.75-10.25a.75.75 0 0 0-1.5 0v4.5c0 .414.336.75.75.75h4.5a.75.75 0 0 0 0-1.5h-3.75v-3.75Z" clip-rule="evenodd" /></svg>
+                        Belum Diverifikasi
+                    </span>
+                @endif
+            </div>
+            {{-- ======================================= AKHIR BLOK ======================================== --}}
+
             <span class="text-sm text-gray-400 group-hover:text-blue-600 group-hover:font-semibold flex items-center gap-2">
                 Download
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" /><path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" /></svg>
@@ -51,6 +68,7 @@
     @endforeach
 </ul>
 @else
+{{-- Tampilan folder kosong (tidak berubah) --}}
 <div class="text-center text-gray-500 py-16">
     <svg class="mx-auto h-16 w-16 text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m19.5 0a3 3 0 01-3 3H5.25a3 3 0 01-3-3m19.5 0a3 3 0 00-3-3H5.25a3 3 0 00-3 3m16.5 0h.008v.008h-.008v-.008z" /></svg>
     <h4 class="mt-4 text-xl font-semibold text-gray-700">Folder Kosong</h4>

@@ -16,7 +16,26 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap4.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-
+  {{-- CSS untuk styling folder yang aktif --}}
+    <style>
+        .folder-item.active {
+            background-color: #e0f2fe; /* blue-50 */
+            color: #1e40af; /* blue-800 */
+            font-weight: 600;
+        }
+        .folder-item.active .text-gray-700 {
+            color: #1e40af; /* blue-800 */
+        }
+        .folder-item.active .arrow-icon {
+            color: #3b82f6; /* blue-500 */
+        }
+        .folder-item.active .folder-icon {
+            color: #3b82f6; /* blue-500 */
+        }
+        .folder-item:hover {
+            background-color: #f3f4f6; /* gray-100 */
+        }
+    </style>
     <link rel="shortcut icon" href="{{ asset('images/favicon.ico') }}" />
 </head>
 
