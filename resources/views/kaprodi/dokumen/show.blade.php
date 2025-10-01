@@ -1,80 +1,111 @@
 <x-app-layout>
     <div class="container py-4">
-        {{-- Navigasi Breadcrumb untuk Kaprodi --}}
-        <nav aria-label="breadcrumb">
+
+        {{-- ========================================================== --}}
+        {{-- BAGIAN HEADER HALAMAN --}}
+        {{-- ========================================================== --}}
+        <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('kaprodi.dokumen.index') }}">Semua Folder Dosen</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('kaprodi.dokumen.index') }}">Manajemen Dokumen Dosen</a></li>
                 <li class="breadcrumb-item active" aria-current="page">{{ $folder->name }}</li>
             </ol>
         </nav>
 
-        {{-- Header Halaman --}}
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center mb-4">
+            <i class="bi bi-folder-fill text-primary me-3 fs-1"></i>
             <div>
-                <h2 class="mb-0">Isi Folder: {{ $folder->name }}</h2>
-                <p class="text-muted mb-0">Milik: <strong>{{ $folder->user->name }}</strong></p>
+                <h2 class="mb-0">{{ $folder->name }}</h2>
+                <p class="text-muted fs-7 mb-0">Milik Dosen: <strong>{{ $folder->user->name }}</strong></p>
             </div>
-            {{-- Tombol aksi (upload/buat folder) dihilangkan untuk Kaprodi --}}
         </div>
 
-        {{-- Alert --}}
+        {{-- Notifikasi --}}
         @if(session('success'))
-            <div class="alert alert-success">{{ session('success') }}</div>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
         @endif
         @if(session('error'))
-            <div class="alert alert-danger">{{ session('error') }}</div>
+             <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
         @endif
 
-        {{-- Card untuk Daftar Isi Folder --}}
-        <div class="card shadow-sm">
+        {{-- ========================================================== --}}
+        {{-- BAGIAN DAFTAR ISI FOLDER --}}
+        {{-- ========================================================== --}}
+        <div class="card border-0 shadow-sm">
             <div class="card-body p-0">
                 @if($subfolders->isEmpty() && $documents->isEmpty())
                     <div class="text-center p-5">
-                        <i class="bi bi-folder2-open" style="font-size: 3rem;"></i>
-                        <p class="mt-3 mb-0">Folder ini kosong.</p>
+                        <i class="bi bi-file-earmark-zip fs-1 text-muted"></i>
+                        <h5 class="mt-3">Folder Ini Masih Kosong</h5>
+                        <p class="text-muted">Dosen belum mengunggah dokumen apapun ke folder ini.</p>
                     </div>
                 @else
                     <ul class="list-group list-group-flush">
                         {{-- Tampilkan Sub-folder --}}
                         @foreach($subfolders as $subfolder)
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-folder-fill text-primary me-2"></i>
-                                    <div class="fw-bold">{{ $subfolder->name }}</div>
-                                    {{-- Badge Notifikasi untuk Sub-folder --}}
-                                    @if($subfolder->unverified_documents_count > 0)
-                                        <span class="badge rounded-pill bg-warning text-dark ms-2">
-                                            {{ $subfolder->unverified_documents_count }} item perlu diperiksa
-                                        </span>
-                                    @endif
+                            <li class="list-group-item list-group-item-action d-flex flex-wrap align-items-center gap-3 py-3">
+                                {{-- Informasi Utama Subfolder --}}
+                                <div class="d-flex align-items-center flex-grow-1 me-auto" style="min-width: 250px;">
+                                    <i class="bi bi-folder-fill text-warning me-3 fs-4"></i>
+                                    <div class="fw-bold">
+                                        {{ $subfolder->name }}
+                                        @if($subfolder->unverified_documents_count > 0)
+                                            <span class="badge bg-warning text-warning-emphasis border border-warning ms-2">
+                                                {{ $subfolder->unverified_documents_count }} item perlu diperiksa
+                                            </span>
+                                        @endif
+                                    </div>
                                 </div>
-                                <a href="{{ route('kaprodi.dokumen.show', ['dosen_id' => $subfolder->user_id, 'folder_id' => $subfolder->folder_id]) }}" class="btn btn-info btn-sm"><i class="bi bi-arrow-right-circle me-1"></i> Buka</a>
+                                {{-- Tombol Aksi Subfolder --}}
+                                <a href="{{ route('kaprodi.dokumen.show', ['dosen_id' => $subfolder->user_id, 'folder_id' => $subfolder->folder_id]) }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-box-arrow-in-right me-1"></i> Buka Folder
+                                </a>
                             </li>
                         @endforeach
 
                         {{-- Tampilkan Dokumen --}}
                         @foreach ($documents as $document)
-                            <li class="list-group-item d-flex flex-wrap align-items-center">
-                                <div class="col-12 col-md-5 mb-2 mb-md-0 d-flex align-items-center">
-                                    <i class="bi bi-file-earmark-text me-2 fs-4"></i>
-                                    <div><strong>{{ $document->file_name }}</strong><br><small class="text-muted">{{ $document->name }}</small></div>
+                            <li class="list-group-item d-flex flex-wrap align-items-center gap-3 py-3">
+                                {{-- Informasi Utama Dokumen --}}
+                                <div class="d-flex align-items-center flex-grow-1 me-auto" style="min-width: 250px;">
+                                    <i class="bi bi-file-earmark-text me-3 fs-4"></i>
+                                    <div>
+                                        <strong class="d-block">{{ $document->file_name }}</strong>
+                                        <small class="text-muted">{{ $document->name }}</small>
+                                    </div>
                                 </div>
-                                <div class="col-6 col-md-3 text-md-center">
+                                {{-- Status Verifikasi Dokumen --}}
+                                <div class="flex-shrink-0">
                                     @if ($document->verified)
-                                        <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Terverifikasi</span>
+                                        <span class="badge bg-success text-success-emphasis border border-success-subtle">
+                                            <i class="bi bi-check-circle-fill"></i> Terverifikasi
+                                        </span>
                                     @else
-                                        <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Belum Diverifikasi</span>
+                                        <span class="badge bg-warning text-warning-emphasis border border-warning-subtle">
+                                            <i class="bi bi-hourglass-split"></i> Belum Diverifikasi
+                                        </span>
                                     @endif
                                 </div>
-                                <div class="col-6 col-md-4 text-md-end">
-                                    <div class="btn-group" role="group">
-                                        <a href="{{ route('kaprodi.dokumen.download', $document->id) }}" class="btn btn-outline-success btn-sm" title="Unduh"><i class="bi bi-download"></i></a>
-                                        <a href="{{ route('kaprodi.dokumen.preview', $document->id) }}" target="_blank" class="btn btn-outline-info btn-sm" title="Lihat"><i class="bi bi-eye"></i></a>
-                                        {{-- Tombol Edit dan Hapus diganti dengan Tombol Verifikasi --}}
-                                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#verifyDocumentModal-{{ $document->id }}" title="Verifikasi Dokumen">
+                                {{-- Tombol Aksi Dokumen --}}
+                                <div class="btn-group flex-shrink-0" role="group">
+                                    <a href="{{ route('kaprodi.dokumen.download', $document->id) }}" class="btn btn-outline-secondary btn-sm" title="Unduh"><i class="bi bi-download"></i></a>
+                                    <a href="{{ route('kaprodi.dokumen.preview', $document->id) }}" target="_blank" class="btn btn-outline-primary btn-sm" title="Lihat"><i class="bi bi-eye"></i></a>
+
+                                    {{-- Tombol verifikasi dengan gaya berbeda tergantung status --}}
+                                    @if (!$document->verified)
+                                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#verifyDocumentModal-{{ $document->id }}" title="Verifikasi Dokumen">
                                             <i class="bi bi-check-circle"></i> Verifikasi
                                         </button>
-                                    </div>
+                                    @else
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#verifyDocumentModal-{{ $document->id }}" title="Ubah Status Verifikasi">
+                                            <i class="bi bi-pencil-square"></i> Ubah Status
+                                        </button>
+                                    @endif
                                 </div>
                             </li>
                         @endforeach
@@ -95,7 +126,7 @@
                     </div>
                     <form action="{{ route('kaprodi.dokumen.verify', $document->id) }}" method="POST">
                         @csrf
-                        @method('PATCH') {{-- Menggunakan PATCH untuk update parsial --}}
+                        @method('PATCH')
                         <div class="modal-body">
                             <p>Anda akan mengubah status verifikasi untuk dokumen:</p>
                             <p class="fw-bold">{{ $document->file_name }}</p>

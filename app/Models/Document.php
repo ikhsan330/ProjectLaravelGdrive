@@ -14,8 +14,10 @@ class Document extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
-    public function folder()
+ public function folder()
     {
+        // Eloquent's belongsTo relationship with custom keys:
+        // belongsTo(RelatedModel, foreign_key_on_this_model, owner_key_on_related_model)
         return $this->belongsTo(Folder::class, 'folderid', 'folder_id');
     }
 }

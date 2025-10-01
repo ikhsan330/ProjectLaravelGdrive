@@ -24,7 +24,7 @@ class AdminDocumentController extends Controller
             'file' => 'required|file',
             'file_name' => 'required|string|max:255',
             'folderid' => 'required|string',
-            'user_id' => 'required|exists:users,id', // TAMBAHKAN VALIDASI INI
+            'user_id' => 'required|exists:users,id',
         ]);
 
         $accessToken = (new TokenDriveController)->token();

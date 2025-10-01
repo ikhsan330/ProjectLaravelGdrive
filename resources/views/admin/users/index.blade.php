@@ -10,6 +10,25 @@
                     <p class="card-description">
                         Berikut adalah daftar semua pengguna yang terdaftar di sistem.
                     </p>
+
+                    {{-- Container untuk Alerts (Pesan setelah aksi) --}}
+                    @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        {{ session('success') }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    @endif
+                    @if(session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        {{ session('error') }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    @endif
+
                     <div class="table-responsive">
                         <table class="table table-striped" id="usersTable">
                             <thead>
@@ -24,7 +43,6 @@
                             </thead>
                             <tbody>
                                 @forelse($users as $user)
-                                @if($user->role !== 'admin')
                                 <tr>
                                     <td>{{ $loop->iteration }}</td>
                                     <td>{{ $user->name }}</td>
@@ -34,15 +52,16 @@
                                     </td>
                                     <td>{{ $user->created_at->format('d M Y, H:i') }}</td>
                                     <td>
-                                        <a href="#" class="btn btn-warning btn-sm">Edit</a>
-                                        <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus user ini?');">
+                                        <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-warning btn-sm">Edit</a>
+
+                                        {{-- PERUBAHAN 1: Atribut 'onsubmit' dihapus dan ditambahkan class 'delete-form' --}}
+                                        <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="d-inline delete-form">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
                                         </form>
                                     </td>
                                 </tr>
-                                @endif
                                 @empty
                                 <tr>
                                     <td colspan="6" class="text-center">Tidak ada data pengguna.</td>
@@ -56,11 +75,5 @@
         </div>
     </div>
 
-    @push('scripts')
-    <script>
-         $(document).ready(function() {
-        $('#usersTable').DataTable();
-    });
-    </script>
-    @endpush
+
 </x-app-layout>

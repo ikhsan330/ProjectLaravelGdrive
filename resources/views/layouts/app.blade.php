@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="{{ asset('vendors/css/vendor.bundle.base.css') }}">
     <link rel="stylesheet" href="{{ asset('css/vertical-layout-light/style.css') }}">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap4.min.css">
-
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
 
     <link rel="shortcut icon" href="{{ asset('images/favicon.ico') }}" />
@@ -52,9 +52,39 @@
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap4.min.js"></script>
 
+
     {{-- Placeholder untuk skrip spesifik dari setiap halaman --}}
     @stack('scripts')
+    {{-- PERUBAHAN 2: Menambahkan kembali library SweetAlert2 --}}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <script>
+        $(document).ready(function() {
+            // Inisialisasi DataTable
+            $('#usersTable').DataTable();
+
+            // PERUBAHAN 3: Script untuk menampilkan alert konfirmasi hapus
+            $('.delete-form').on('submit', function(e) {
+                e.preventDefault(); // Mencegah form untuk langsung di-submit
+                var form = this;
+
+                Swal.fire({
+                    title: 'Apakah Anda yakin?',
+                    text: "User yang dihapus tidak dapat dikembalikan!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, hapus!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit(); // Jika dikonfirmasi, maka jalankan submit form
+                    }
+                })
+            });
+        });
+    </script>
 </body>
 
 </html>

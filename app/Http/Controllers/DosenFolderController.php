@@ -60,7 +60,7 @@ class DosenFolderController extends Controller
         $folder = Folder::where('folder_id', $folder_id)
             ->where('user_id', $userId)
             ->firstOrFail();
-
+        $breadcrumbs = $this->getFolderAncestry($folder);
         // AMBIL SUB-FOLDER DAN HITUNG DOKUMEN BELUM DIVERIFIKASI DI DALAMNYA
         $subfolders = Folder::where('parent_id', $folder->folder_id)
             ->where('user_id', $userId)
@@ -78,7 +78,31 @@ class DosenFolderController extends Controller
 
 
         // Anda perlu membuat view baru, misalnya 'dosen.folder.show'
-        return view('dosen.dokumen.show', compact('folder', 'documents', 'subfolders'));
+        return view('dosen.dokumen.show', compact('folder', 'documents', 'subfolders', 'breadcrumbs'));
+    }
+
+    private function getFolderAncestry(Folder $folder)
+    {
+        $breadcrumbs = [];
+        $current = $folder;
+
+        // Terus berjalan mundur selama folder saat ini memiliki induk
+        while ($current && $current->parent_id) {
+            $parent = Folder::where('folder_id', $current->parent_id)
+                ->where('user_id', Auth::user()->id)
+                ->first();
+
+            if ($parent) {
+                // Masukkan ke awal array agar urutannya benar (Induk -> Anak)
+                array_unshift($breadcrumbs, $parent);
+                $current = $parent;
+            } else {
+                // Hentikan jika ada rantai yang terputus
+                break;
+            }
+        }
+
+        return $breadcrumbs;
     }
 
     /**

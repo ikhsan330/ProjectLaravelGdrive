@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AdminFolderController extends Controller
 {
@@ -19,13 +20,60 @@ class AdminFolderController extends Controller
     public function createFolderForm()
     {
         $folders = $this->listRootFolders();
-
         $dosenFoldersData = $this->getAllDosenFoldersWithNames();
         $groupedFolders = $dosenFoldersData->groupBy('name');
-
         $dosens = User::where('role', 'dosen')->get();
+        $unverifiedCounts = collect(); // Default ke koleksi kosong
 
-        return view('admin.dokumen.index', compact('folders', 'groupedFolders', 'dosens'));
+        // ========================= PERUBAHAN LOGIKA REKURSIF DIMULAI =========================
+
+        // Ambil ID folder tingkat atas (induk) yang unik.
+        $topLevelFolderIds = $dosenFoldersData->pluck('folder_id')->unique()->values();
+
+        // Hanya jalankan kueri jika ada folder yang akan diperiksa.
+        if ($topLevelFolderIds->isNotEmpty()) {
+            // Siapkan placeholder untuk binding parameter SQL yang aman.
+            $placeholders = implode(',', array_fill(0, count($topLevelFolderIds), '?'));
+
+            // Kueri ini menggunakan Common Table Expression (CTE) Rekursif untuk:
+            // 1. Menemukan semua folder anak (descendant) dari setiap folder induk.
+            // 2. Menghubungkannya kembali ke folder induk asalnya (root_id).
+            $cte = "
+                WITH RECURSIVE folder_hierarchy (folder_id, root_id) AS (
+                    -- Anchor: Memulai dari folder induk tingkat atas
+                    SELECT folder_id, folder_id as root_id
+                    FROM folders
+                    WHERE parent_id IS NULL AND folder_id IN ($placeholders)
+
+                    UNION ALL
+
+                    -- Recursive Member: Mencari semua anak dari hasil sebelumnya
+                    SELECT f.folder_id, h.root_id
+                    FROM folders f
+                    JOIN folder_hierarchy h ON f.parent_id = h.folder_id
+                )
+            ";
+
+            // Kueri utama untuk menghitung dokumen yang belum terverifikasi
+            $unverifiedQuery = "
+                {$cte}
+                SELECT
+                    h.root_id,
+                    COUNT(d.id) as total
+                FROM folder_hierarchy h
+                JOIN documents d ON h.folder_id = d.folderid
+                WHERE d.verified = false
+                GROUP BY h.root_id
+            ";
+
+            // Jalankan kueri mentah dengan binding yang aman
+            $results = DB::select($unverifiedQuery, $topLevelFolderIds->all());
+
+            // Ubah hasil array objek menjadi koleksi asosiatif ['root_id' => total]
+            $unverifiedCounts = collect($results)->pluck('total', 'root_id');
+        }
+
+        return view('admin.dokumen.index', compact('folders', 'groupedFolders', 'dosens', 'unverifiedCounts'));
     }
 
     /**
@@ -229,7 +277,7 @@ class AdminFolderController extends Controller
 
             // Update nama di semua record database yang memiliki folder_id yang sama
             Folder::where('folder_id', $folder->folder_id)
-                  ->update(['name' => $request->input('folder_name')]);
+                ->update(['name' => $request->input('folder_name')]);
 
             return back()->with('success', 'Nama folder berhasil diperbarui.');
         } catch (\Exception $e) {
@@ -257,25 +305,91 @@ class AdminFolderController extends Controller
     /**
      * Menampilkan isi dari folder spesifik milik dosen tertentu (dokumen dan subfolder).
      */
-
-public function showDosenFolder($dosen_id, $folder_id)
+    public function showDosenFolder($dosen_id, $folder_id)
 {
     $folder = Folder::where('user_id', $dosen_id)
         ->where('folder_id', $folder_id)
         ->firstOrFail();
 
-    // INI ADALAH BARIS KUNCI
-    $documents = Document::where('folderid', $folder->folder_id)->get();
-//   dd('ID Folder yang dicari:', $folder->folder_id);
+    $breadcrumbs = $this->getFolderAncestry($folder);
+
+    // PERBAIKAN 1: Tambahkan ->where('user_id', $dosen_id)
+    // Memastikan dokumen yang diambil adalah milik dosen yang bersangkutan.
+    $documents = Document::with('user')
+        ->where('folderid', $folder->folder_id)
+        ->where('user_id', $dosen_id)
+        ->get();
+
     $subfolders = Folder::where('user_id', $dosen_id)
         ->where('parent_id', $folder->folder_id)
         ->get();
 
-    return view('admin.dokumen.show', compact('folder', 'documents', 'subfolders'));
+    $mainFolderHasUnverified = $documents->where('verified', false)->isNotEmpty();
+
+    $unverifiedSubfolderMap = collect();
+    $subfolderIds = $subfolders->pluck('folder_id')->unique()->values();
+
+    if ($subfolderIds->isNotEmpty()) {
+        $placeholders = implode(',', array_fill(0, count($subfolderIds), '?'));
+
+        // PERBAIKAN 2: Tambahkan filter user_id di dalam kueri rekursif (CTE)
+        // Ini SANGAT PENTING untuk memastikan pencarian rekursif tidak "lompat" ke data dosen lain.
+        $cte = "
+            WITH RECURSIVE folder_hierarchy (folder_id, root_id) AS (
+                -- Bagian awal (anchor) harus terikat pada user_id
+                SELECT folder_id, folder_id as root_id FROM folders WHERE folder_id IN ($placeholders) AND user_id = ?
+                UNION ALL
+                -- Bagian rekursif juga harus terikat pada user_id
+                SELECT f.folder_id, h.root_id FROM folders f JOIN folder_hierarchy h ON f.parent_id = h.folder_id WHERE f.user_id = ?
+            )
+        ";
+        $unverifiedQuery = "
+            {$cte}
+            SELECT DISTINCT h.root_id
+            FROM folder_hierarchy h
+            -- Join ke tabel dokumen juga harus terikat pada user_id
+            JOIN documents d ON h.folder_id = d.folderid
+            WHERE d.verified = false AND d.user_id = ?
+        ";
+
+        // PERBAIKAN 3: Masukkan $dosen_id ke dalam array 'bindings' untuk setiap '?'
+        $bindings = array_merge($subfolderIds->all(), [$dosen_id, $dosen_id, $dosen_id]);
+        $results = DB::select($unverifiedQuery, $bindings);
+        $unverifiedSubfolderMap = collect($results)->pluck('root_id');
+    }
+
+    // Kirim semua data yang sudah aman ke view
+    return view('admin.dokumen.show', compact('folder', 'documents', 'breadcrumbs', 'subfolders', 'mainFolderHasUnverified', 'unverifiedSubfolderMap'));
 }
-    /**
-     * Menyimpan struktur subfolder baru untuk dosen tertentu.
-     */
+
+    private function getFolderAncestry(Folder $folder)
+    {
+        $breadcrumbs = [];
+        $current = $folder;
+        $userId = $folder->user_id; // Simpan user_id dari folder awal
+
+        // Terus berjalan mundur selama folder saat ini memiliki induk
+        while ($current && $current->parent_id) {
+
+            $parent = Folder::where('folder_id', $current->parent_id)
+                ->where('user_id', $userId)
+                ->first();
+            // ====================== AKHIR PERBAIKAN ======================
+
+            if ($parent) {
+                // Masukkan ke awal array agar urutannya benar (Induk -> Anak)
+                array_unshift($breadcrumbs, $parent);
+                $current = $parent;
+            } else {
+                // Hentikan jika ada rantai yang terputus
+                break;
+            }
+        }
+
+        return $breadcrumbs;
+    }
+
+
     public function storeSubfolderStructure(Request $request)
     {
         $request->validate([
@@ -320,10 +434,6 @@ public function showDosenFolder($dosen_id, $folder_id)
         return back()->with('success', 'Sub-folder "' . $folderName . '" berhasil dibuat dan disimpan!');
     }
 
-    /**
-     * Metode ini tidak digunakan di alur utama halaman admin,
-     * tetapi mungkin digunakan di tempat lain.
-     */
     public function listFoldersRecursive($parentId = null, $prefix = '')
     {
         $isAdmin = Auth::user()->role === 'admin';
@@ -372,7 +482,6 @@ public function showDosenFolder($dosen_id, $folder_id)
             Folder::where('folder_id', $folder_id)->delete();
 
             return back()->with('success', 'Folder dan semua penugasannya berhasil dihapus secara permanen.');
-
         } catch (\Exception $e) {
             Log::error('Gagal menghapus folder master: ' . $e->getMessage());
             // Cek jika error karena file tidak ditemukan (mungkin sudah dihapus manual)
@@ -385,7 +494,7 @@ public function showDosenFolder($dosen_id, $folder_id)
         }
     }
 
-      public function destroySubfolder($id)
+    public function destroySubfolder($id)
     {
         try {
             // 1. Temukan record sub-folder di database
@@ -410,7 +519,6 @@ public function showDosenFolder($dosen_id, $folder_id)
             $subfolder->delete();
 
             return back()->with('success', 'Sub-folder berhasil dihapus secara permanen.');
-
         } catch (\Exception $e) {
             Log::error('Gagal menghapus sub-folder: ' . $e->getMessage());
 

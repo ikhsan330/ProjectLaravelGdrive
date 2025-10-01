@@ -2,9 +2,6 @@
     <div class="row">
         <div class="col-sm-12">
             <div class="home-tab">
-                 {{-- ========================================================== --}}
-                        {{-- == BAGIAN BARU: KARTU STATISTIK (KPI) == --}}
-                        {{-- ========================================================== --}}
                         <div class="row">
                             <div class="col-md-3 mb-4 stretch-card transparent">
                                 <div class="card card-tale">

@@ -9,7 +9,7 @@ use App\Http\Controllers\KaprodiDocumentController;
 Route::middleware(['auth','role:kaprodi'])->group(function () {
     Route::get('/kaprodi/dashboard', [KaprodiController::class, 'dashboard'])->name('kaprodi.dashboard');
 
-     Route::get('/', [KaprodiDocumentController::class, 'index'])
+     Route::get('/kaprodi/index', [KaprodiDocumentController::class, 'index'])
          ->name('kaprodi.dokumen.index');
 
     // Menampilkan isi folder spesifik dari seorang dosen
