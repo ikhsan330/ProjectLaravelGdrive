@@ -1,30 +1,30 @@
+{{-- resources/views/auth/verify-email.blade.php --}}
 <x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn\'t receive the email, we will gladly send you another.') }}
-    </div>
+    <h4 class="mb-3">Verifikasi Email Anda</h4>
+    <h6 class="fw-light mb-4">
+        Terima kasih telah mendaftar! Sebelum memulai, bisakah Anda memverifikasi alamat email Anda dengan mengklik link yang baru saja kami kirimkan? Jika Anda tidak menerimanya, kami akan dengan senang hati mengirimkannya lagi.
+    </h6>
 
     @if (session('status') == 'verification-link-sent')
-        <div class="mb-4 font-medium text-sm text-green-600">
-            {{ __('A new verification link has been sent to the email address you provided during registration.') }}
+        <div class="alert alert-success mb-4">
+            Link verifikasi baru telah dikirim ke alamat email yang Anda berikan saat pendaftaran.
         </div>
     @endif
 
-    <div class="mt-4 flex items-center justify-between">
+    <div class="mt-4 d-grid gap-2">
+        {{-- Tombol Kirim Ulang Email --}}
         <form method="POST" action="{{ route('verification.send') }}">
             @csrf
-
-            <div>
-                <x-primary-button>
-                    {{ __('Resend Verification Email') }}
-                </x-primary-button>
-            </div>
+            <button type="submit" class="btn btn-primary btn-lg font-weight-medium w-100">
+                KIRIM ULANG EMAIL VERIFIKASI
+            </button>
         </form>
 
+        {{-- Tombol Log Out --}}
         <form method="POST" action="{{ route('logout') }}">
             @csrf
-
-            <button type="submit" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                {{ __('Log Out') }}
+            <button type="submit" class="btn btn-outline-secondary btn-lg font-weight-medium w-100">
+                LOG OUT
             </button>
         </form>
     </div>
