@@ -1,61 +1,110 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
-
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+<img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo">
 </p>
 
-## About Laravel
+<h1 align="center">ArsipDrive - Sistem Arsip Digital Polbeng</h1>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+<p align="center">
+Platform terintegrasi untuk mengelola dan mengarsipkan seluruh dokumen akreditasi Politeknik Negeri Bengkalis dengan aman dan efisien.
+</p>
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+📖 Tentang Aplikasi
+ArsipDrive adalah sebuah platform aplikasi web yang dirancang khusus untuk menjawab kebutuhan manajemen dokumen di lingkungan Politeknik Negeri Bengkalis. Aplikasi ini memfasilitasi proses pengarsipan, pengelolaan, dan penelusuran dokumen-dokumen penting, terutama yang berkaitan dengan proses akreditasi.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Dibangun dengan Laravel, aplikasi ini menawarkan sintaks yang elegan dan ekspresif, dengan fokus pada pengalaman pengembangan yang menyenangkan dan kreatif. Tujuannya adalah untuk menyederhanakan tugas-tugas kompleks dalam pengelolaan arsip digital berskala institusi.
 
-## Learning Laravel
+✨ Fitur Utama
+Aplikasi ini dilengkapi dengan berbagai fitur untuk menunjang kebutuhan manajemen arsip digital:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+🗂️ Manajemen Folder Hirarkis: Admin dapat membuat struktur folder induk dan subfolder yang dinamis untuk mengorganisir dokumen berdasarkan kategori, standar, atau kebutuhan lainnya.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+☁️ Integrasi Penuh dengan Google Drive: Seluruh file dan folder secara fisik disimpan di Google Drive, sementara database aplikasi mengelola metadata, izin, dan strukturnya. Pembuatan, pembaruan nama, dan penghapusan folder tersinkronisasi secara otomatis.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+👥 Sistem Multi-User (Admin & Dosen): Terdapat dua peran utama:
 
-## Laravel Sponsors
+Admin: Memiliki kontrol penuh atas struktur folder, manajemen pengguna (dosen), dan verifikasi dokumen.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Dosen: Dapat mengunggah dan mengelola dokumen di dalam folder yang telah ditugaskan kepadanya.
 
-### Premium Partners
+🔐 Isolasi Data yang Aman: Setiap dosen hanya dapat melihat dan mengelola folder serta dokumen miliknya sendiri, memastikan privasi dan keamanan data.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+📊 Dasbor Admin Terpusat: Antarmuka khusus untuk admin guna membuat "Master Folder" yang secara otomatis ditugaskan ke semua dosen, menugaskan ulang folder, dan memonitor status dokumen.
 
-## Contributing
+🌍 Direktori Dokumen Publik: Halaman utama yang dapat diakses publik untuk menelusuri hierarki folder dan melihat daftar dokumen yang tersedia, tanpa bisa mengunduh file sensitif.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+✅ Sistem Verifikasi Dokumen: Admin dapat menandai dokumen sebagai "Terverifikasi", memberikan status validitas pada arsip yang diunggah.
 
-## Code of Conduct
+🚀 Teknologi yang Digunakan
+Backend: PHP, Laravel Framework
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Frontend: HTML, Tailwind CSS, JavaScript
 
-## Security Vulnerabilities
+Database: PostgreSQL (atau database relasional lain yang didukung Laravel)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+API Eksternal: Google Drive API
 
-## License
+⚙️ Instalasi & Konfigurasi
+Untuk menjalankan aplikasi ini secara lokal, ikuti langkah-langkah berikut:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Clone Repositori
+
+Bash
+
+git clone https://www.andarepository.com/
+cd [nama-folder-proyek]
+Install Dependensi
+
+Bash
+
+composer install
+npm install
+Konfigurasi Lingkungan
+
+Salin file .env.example menjadi .env.
+
+Bash
+
+cp .env.example .env
+Buat kunci aplikasi baru.
+
+Bash
+
+php artisan key:generate
+Atur koneksi database Anda di file .env (variabel DB_*).
+
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=arsip_polbeng
+DB_USERNAME=user
+DB_PASSWORD=password
+Atur kredensial untuk Google Drive API di file .env. Anda memerlukan GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, dan GOOGLE_REFRESH_TOKEN.
+
+Migrasi Database
+Jalankan migrasi untuk membuat semua tabel yang diperlukan di database.
+
+Bash
+
+php artisan migrate
+Jika Anda memiliki seeder, jalankan juga:
+
+Bash
+
+php artisan db:seed
+Compile Aset Frontend
+
+Bash
+
+npm run dev
+Jalankan Server Lokal
+
+Bash
+
+php artisan serve
+Aplikasi sekarang akan berjalan di http://127.0.0.1:8000.
+
+🤝 Kontribusi
+Terima kasih telah mempertimbangkan untuk berkontribusi pada proyek ini! Panduan kontribusi dapat ditemukan di dokumentasi Laravel.
+
+📄 Lisensi
+Aplikasi ini merupakan perangkat lunak sumber terbuka yang dilisensikan di bawah Lisensi MIT.
