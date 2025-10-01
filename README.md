@@ -1,6 +1,4 @@
-<p align="center">
-![Banner Halaman Utama ArsipGdrive](URL_PUBLIK_GAMBAR_ANDA)
-</p>
+
 
 <h1 align="center">ArsipDrive - Sistem Arsip Digital Polbeng</h1>
 
