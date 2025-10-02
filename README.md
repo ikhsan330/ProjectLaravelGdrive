@@ -1,4 +1,4 @@
-<img src="" alt="Italian Trulli">
+<img src="image.png" alt="Italian Trulli">
 
 <h1 align="center">ArsipDrive - Sistem Arsip Digital Polbeng</h1>
 
