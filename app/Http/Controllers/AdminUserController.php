@@ -33,7 +33,7 @@ class AdminUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:6'],
-            'role' => ['required', 'in:dosen,kaprodi'],
+            'role' => ['required', 'in:dosen,kaprodi,asesor,p4pm'],
         ]);
 
         $user = User::create([
@@ -67,7 +67,7 @@ class AdminUserController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             // Password bersifat opsional saat update
             'password' => ['nullable', 'string', 'min:6'],
-            'role' => ['required', 'in:dosen,kaprodi'],
+            'role' => ['required', 'in:dosen,kaprodi,asesor,p4pm'],
         ]);
 
         $userData = [

@@ -10,6 +10,10 @@
                         href="{{ route('dosen.dashboard') }}"
                     @elseif(Auth::user()->role == 'kaprodi')
                         href="{{ route('kaprodi.dashboard') }}"
+                    @elseif(Auth::user()->role == 'asesor')
+                        href="{{ route('asesor.dashboard') }}"
+                    @elseif(Auth::user()->role == 'p4pm')
+                        href="{{ route('p4pm.dashboard') }}"
                     @endif
                 >
                     <i class="mdi mdi-home menu-icon"></i>

@@ -13,6 +13,10 @@
             <a class="navbar-brand brand-logo" href="{{ route('dosen.dashboard') }}">
             @elseif(Auth::user()->role == 'kaprodi')
             <a class="navbar-brand brand-logo" href="{{ route('kaprodi.dashboard') }}">
+            @elseif (Auth::user()->role == 'asesor')
+            <a class="navbar-brand brand-logo" href="{{ route('asesor.dashboard') }}">
+            @elseif (Auth::user()->role == 'p4pm')
+            <a class="navbar-brand brand-logo" href="{{ route('p4pm.dashboard') }}">
             @endif
         @endauth
           <img src="{{ asset('images/logoArsipDokumen2.png') }}" alt="logo" style="width:120px; height:40px;" />
@@ -24,6 +28,10 @@
             <a class="navbar-brand brand-logo-mini" href="{{ route('dosen.dashboard') }}">
             @elseif(Auth::user()->role == 'kaprodi')
             <a class="navbar-brand brand-logo-mini" href="{{ route('kaprodi.dashboard') }}">
+            @elseif (Auth::user()->role == 'asesor')
+            <a class="navbar-brand brand-logo-mini" href="{{ route('asesor.dashboard') }}">
+            @elseif (Auth::user()->role == 'p4pm')
+            <a class="navbar-brand brand-logo-mini" href="{{ route('p4pm.dashboard') }}">
             @endif
         @endauth
           <img src="{{ asset('images/favicon.ico') }}" alt="logo" />
@@ -44,8 +52,10 @@
             <h3 class="welcome-sub-text">Semangat menginspirasi, Bapak/Ibu Dosen.</h3>
         @elseif(Auth::user()->role == 'kaprodi')
             <h3 class="welcome-sub-text">Selamat datang, Kepala Program Studi.</h3>
-        @else
+        @elseif (Auth::user()->role == 'asesor')
             <h3 class="welcome-sub-text">Selamat datang di sistem kami.</h3>
+        @elseif (Auth::user()->role == 'p4pm')
+            <h3 class="welcome-sub-text">Selamat datang, Tim P4PM.</h3>
         @endif
     </li>
 @endauth

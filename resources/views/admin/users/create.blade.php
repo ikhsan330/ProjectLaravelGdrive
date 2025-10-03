@@ -27,6 +27,8 @@
                                 <option selected disabled>Pilih Role</option>
                                 <option value="dosen">Dosen</option>
                                 <option value="kaprodi">Kaprodi</option>
+                                <option value="asesor">Asesor</option>
+                                <option value="p4pm">P4PM</option>
                             </select>
                         </div>
                         <button type="submit" class="btn btn-primary me-2">Buat User</button>

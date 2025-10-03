@@ -29,7 +29,7 @@
 .auth .auth-form-light {
     /* MENGUBAH FORM MENJADI TRANSPARAN */
     background: rgba(255, 255, 255, 0.1); /* Latar belakang transparan */
-    backdrop-filter: blur(15px); /* Efek blur pada background di belakang form */
+    backdrop-filter: blur(5px); /* Efek blur pada background di belakang form */
     border-radius: 15px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);

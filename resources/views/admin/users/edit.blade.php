@@ -45,6 +45,8 @@
                             <select class="form-control" id="role" name="role" required>
                                 <option value="dosen" {{ old('role', $user->role) == 'dosen' ? 'selected' : '' }}>Dosen</option>
                                 <option value="kaprodi" {{ old('role', $user->role) == 'kaprodi' ? 'selected' : '' }}>Kaprodi</option>
+                                <option value="asesor" {{ old('role', $user->role) == 'asesor' ? 'selected' : '' }}>Asesor</option>
+                                <option value="p4pm" {{ old('role', $user->role) == 'p4pm' ? 'selected' : '' }}>P4PM</option>
                             </select>
                         </div>
 

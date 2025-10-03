@@ -16,8 +16,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             return view('admin.dashboard');
         } elseif (Auth::user()->role == 'dosen') {
             return view('dosen.dashboard');
-        } else {
+        } elseif (Auth::user()->role == 'kaprodi') {
             return view('kaprodi.dashboard');
+        } elseif (Auth::user()->role == 'asesor') {
+            return view('asesor.dashboard');
+        } else{
+            return view('p4pm.dashboard');
         }
     });
 });
@@ -25,5 +29,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 require __DIR__ . '/dosen-route.php';
 require __DIR__ . '/admin-route.php';
 require __DIR__ . '/kaprodi-route.php';
-
+require __DIR__ . '/asesor-route.php';
+require __DIR__ . '/p4pm-route.php';
 require __DIR__ . '/auth.php';

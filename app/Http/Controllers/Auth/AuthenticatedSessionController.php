@@ -38,6 +38,12 @@ class AuthenticatedSessionController extends Controller
             } else if(Auth::user()->role === "kaprodi") {
                 $url = "kaprodi/dashboard";
             }
+            else if(Auth::user()->role === "asesor") {
+                $url = "asesor/dashboard";
+            }
+            else if(Auth::user()->role === "p4pm") {
+                $url = "p4pm/dashboard";
+            }
 
         return redirect()->intended($url);
     }
