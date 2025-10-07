@@ -15,18 +15,12 @@
             </div>
         @endif
 
-        {{-- BAGIAN HEADER HALAMAN UTAMA --}}
+        {{-- Header Halaman --}}
         <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-center mb-4">
-            <h2 class="mb-3 mb-md-0">Tinjauan Dokumen Dosen</h2>
-            @if ($unverifiedCounts->sum() > 0)
-                <a href="{{ route('kaprodi.dokumen.unverified') }}" class="btn btn-danger">
-                    <i class="bi bi-card-checklist me-2"></i>
-                    Lihat {{ $unverifiedCounts->sum() }} Dokumen Perlu Verifikasi
-                </a>
-            @endif
+            <h2 class="mb-3 mb-md-0">Tinjauan Dokumen Assesor</h2>
         </div>
 
-        {{-- BAGIAN DAFTAR FOLDER --}}
+        {{-- Daftar Folder --}}
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-light">
                 <h5 class="mb-0">Folder Dokumen Publik</h5>
@@ -37,23 +31,11 @@
                         <li class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-3 py-3 px-3">
                             <div class="d-flex align-items-center flex-grow-1 me-auto" style="min-width: 250px;">
                                 <i class="bi bi-folder2-open me-3 fs-4 text-primary"></i>
-                                <div>
-                                    <span class="fw-bold fs-6">{{ $folder->name }}</span>
-                                    @if(isset($unverifiedCounts[$folder->folder_id]) && $unverifiedCounts[$folder->folder_id] > 0)
-                                        <span class="badge bg-danger ms-1">
-                                            {{ $unverifiedCounts[$folder->folder_id] }} item perlu verifikasi
-                                        </span>
-                                    @endif
-                                    {{-- BARU: Menampilkan notifikasi komentar --}}
-                                    @if(isset($commentCounts[$folder->folder_id]) && $commentCounts[$folder->folder_id] > 0)
-                                        <span class="badge bg-info text-dark ms-1">
-                                            Ada Komentar
-                                        </span>
-                                    @endif
-                                </div>
+                                <span class="fw-bold fs-6">{{ $folder->name }}</span>
                             </div>
+
                             <div class="btn-group" role="group">
-                                <a href="{{ route('kaprodi.folder.show', $folder->folder_id) }}" class="btn btn-outline-primary btn-sm">
+                                <a href="{{ route('assesor.folder.show', $folder->folder_id) }}" class="btn btn-outline-primary btn-sm">
                                     <i class="bi bi-box-arrow-in-right me-1"></i> Buka
                                 </a>
                             </div>

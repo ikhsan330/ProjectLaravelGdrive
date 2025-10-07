@@ -20,4 +20,10 @@ class Document extends Model
         // belongsTo(RelatedModel, foreign_key_on_this_model, owner_key_on_related_model)
         return $this->belongsTo(Folder::class, 'folderid', 'folder_id');
     }
+
+    // Di dalam file App\Models\Document.php
+public function comments()
+{
+    return $this->hasMany(Comment::class)->latest(); // Tampilkan komentar terbaru di atas
+}
 }

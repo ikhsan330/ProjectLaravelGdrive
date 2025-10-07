@@ -20,16 +20,22 @@ class DosenController extends Controller
         $totalDocuments = Document::where('user_id', $userId)->count();
         $verifiedDocuments = Document::where('user_id', $userId)->where('verified', true)->count();
         $unverifiedDocuments = Document::where('user_id', $userId)->where('verified', false)->count();
-        $totalFolders = Folder::where('user_id', $userId)->whereNull('parent_id')->count();
+
+        // PERUBAHAN: Folder bersifat publik. Hitung semua folder induk yang ada di sistem.
+        $totalFolders = Folder::whereNull('parent_id')->count();
 
         // =============================================================
         // DATA UNTUK DOUGHNUT CHART (Distribusi Dokumen per Folder)
         // =============================================================
-        $foldersWithDocuments = Folder::where('user_id', $userId)
-                                      ->whereNull('parent_id') // Hanya folder induk
-                                      ->has('documents')
+
+        // PERUBAHAN: Logika diubah.
+        // Cari folder induk publik, TAPI hanya yang berisi dokumen milik dosen yang sedang login.
+        $foldersWithDocuments = Folder::whereNull('parent_id') // 1. Mulai dari semua folder induk
+                                      ->whereHas('documents', function ($query) use ($userId) {
+                                          $query->where('user_id', $userId); // 2. Filter folder yang punya dokumen milik dosen ini
+                                      })
                                       ->withCount(['documents' => function ($query) use ($userId) {
-                                          $query->where('user_id', $userId);
+                                          $query->where('user_id', $userId); // 3. Hitung HANYA dokumen milik dosen ini
                                       }])
                                       ->get();
 
@@ -37,7 +43,7 @@ class DosenController extends Controller
         $folderDocumentCounts = $foldersWithDocuments->pluck('documents_count');
 
         // =============================================================
-        // DATA UNTUK LINE CHART (Aktivitas Upload per Hari - 30 hari terakhir)
+        // DATA UNTUK LINE CHART (Logika ini sudah benar, tidak perlu diubah)
         // =============================================================
         $dbConnection = config('database.default');
         $dateFunction = ($dbConnection == 'mysql')

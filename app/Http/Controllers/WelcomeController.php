@@ -4,72 +4,62 @@ namespace App\Http\Controllers;
 
 use App\Models\Document;
 use App\Models\Folder;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
-use Illuminate\Support\Facades\DB;
 
 class WelcomeController extends Controller
 {
-       public function index()
+    /**
+     * Menampilkan halaman utama (welcome page).
+     * Menyiapkan daftar folder induk dan folder unggulan untuk ditampilkan.
+     */
+    public function index(): View
     {
-        // Kueri CTE sudah benar
-        $query = "
-            WITH RECURSIVE all_dosen_folders AS (
-                SELECT f.id, f.name, f.folder_id, f.parent_id, f.user_id, u.name as user_name
-                FROM folders f JOIN users u ON f.user_id = u.id
-                WHERE f.parent_id IS NULL AND u.role = 'dosen'
-                UNION ALL
-                SELECT f_child.id, f_child.name, f_child.folder_id, f_child.parent_id, f_child.user_id, adf.user_name
-                FROM folders f_child
-                JOIN all_dosen_folders adf ON f_child.parent_id = adf.folder_id AND f_child.user_id = adf.user_id
-            )
-            SELECT * FROM all_dosen_folders;
-        ";
-        $allFolders = collect(DB::select($query));
+        // 1. Mengambil semua folder induk (root) yang bersifat publik.
+        // Logika kompleks dengan CTE dan grouping per dosen tidak diperlukan lagi.
+        $rootFolders = Folder::whereNull('parent_id')
+            ->orderBy('name', 'asc')
+            ->get();
 
-        // ======================= PERBAIKAN LOGIKA PENGELOMPOKAN =======================
-        // Kelompokkan folder anak berdasarkan KUNCI GABUNGAN (parent_id dan user_id)
-        // Ini akan membuat grup terpisah untuk setiap dosen, misal: 'gdrive_id_parent_user_id_afis'
-        $groupedFolders = $allFolders->groupBy(function ($item) {
-            // Kita hanya kelompokkan jika item adalah subfolder
-            if ($item->parent_id) {
-                return $item->parent_id . '_' . $item->user_id;
-            }
-        });
-        // ============================================================================
+        // 2. Mengambil folder unggulan (misalnya, 3 folder terbaru yang dibuat).
+        // Kita perlu memuat relasi untuk menghitung jumlah file di dalamnya.
+        $featuredFolders = Folder::whereNull('parent_id')
+            ->orderBy('created_at', 'desc')
+            ->take(3)
+            ->get();
 
-        $groupedRootFolders = $allFolders->where('parent_id', null)->groupBy('name');
-
-        // ... Logika untuk featuredFolders tidak berubah dan sudah benar ...
-        $allRootFolders = Folder::whereNull('parent_id')->orderBy('created_at', 'desc')->get();
-        $featuredFolders = $allRootFolders->unique('name')->values()->take(3);
+        // 3. Eager load relasi dan hitung total file untuk setiap folder unggulan.
+        // Pastikan model Folder memiliki relasi 'documents' dan 'childrenRecursive'.
         $featuredFolders->each(function ($folder) {
-            $folder->load('documents', 'childrenRecursive');
-            $folder->total_files = $folder->getTotalFileCount();
+            // Memuat semua dokumen di semua level subfolder dan menghitungnya
+            $folder->load('documents', 'childrenRecursive.documents');
+            $folder->total_files = $folder->getTotalFileCount(); // Asumsi method ini ada di model Folder
         });
 
+        // 4. Kirim data yang sudah disederhanakan ke view.
         return view('welcome', [
-            'groupedRootFolders' => $groupedRootFolders,
-            'groupedFolders'     => $groupedFolders,
-            'featuredFolders'    => $featuredFolders
+            'rootFolders'     => $rootFolders,
+            'featuredFolders' => $featuredFolders,
         ]);
     }
 
     /**
-     * Mengambil isi folder (dokumen dan subfolder).
-     * Metode ini sudah benar dan aman.
+     * Mengambil isi folder (dokumen dan subfolder) untuk ditampilkan secara dinamis (misalnya via AJAX).
+     * Logika ini disederhanakan untuk folder publik.
      */
-    public function getFolderContents(Folder $folder)
+    public function getFolderContents(Folder $folder): View
     {
+        // Ambil subfolder dari folder yang dipilih.
+        // Klausa ->where('user_id', ...) dihapus.
         $subfolders = Folder::where('parent_id', $folder->folder_id)
-            ->where('user_id', $folder->user_id)
             ->orderBy('name')
             ->get();
 
-        $documents = Document::where('folderid', $folder->folder_id)
-            ->where('user_id', $folder->user_id)
-            ->orderBy('name')
+        // Ambil dokumen dari folder yang dipilih, beserta data pemiliknya (user).
+        // Klausa ->where('user_id', ...) dihapus agar semua dokumen tampil.
+        $documents = Document::with('user') // Eager load 'user' untuk menampilkan nama pemilik
+            ->where('folderid', $folder->folder_id)
+            ->orderBy('file_name')
             ->get();
 
         return view('partials._folder_contents', [

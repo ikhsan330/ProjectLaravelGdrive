@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Document;
+use App\Models\Folder; // Import Folder untuk validasi
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -15,13 +16,16 @@ class DosenDocumentController extends Controller
      */
     public function store(Request $request)
     {
+        // PERBAIKAN: Menambahkan validasi 'exists' untuk memastikan folder tujuan itu ada.
         $request->validate([
-            'file' => 'required|file',
+            'file' => 'required|file|max:20480', // Batas file 20MB
             'file_name' => 'required|string|max:255',
-            'folderid' => 'required|string',
+            'folderid' => 'required|string|exists:folders,folder_id', // Validasi ke tabel folders
         ]);
 
-        $userId = Auth::id(); // Ambil user ID dari sesi login
+        $userId = Auth::id();
+
+        // Validasi kepemilikan folder tidak diperlukan, karena dosen bisa upload ke folder mana saja.
 
         $accessToken = (new TokenDriveController)->token();
         if (!$accessToken) {
@@ -49,7 +53,7 @@ class DosenDocumentController extends Controller
             $document->name = $originalFileName;
             $document->fileid = $file_id;
             $document->folderid = $folderId;
-            $document->user_id = $userId; // Simpan user ID dari sesi
+            $document->user_id = $userId; // Simpan user_id dari sesi login
             $document->save();
 
             return back()->with('success', 'File berhasil diunggah!');
@@ -61,17 +65,18 @@ class DosenDocumentController extends Controller
 
     /**
      * Memperbarui dokumen milik dosen.
+     * PENTING: Validasi kepemilikan di sini sudah benar dan dipertahankan.
      */
     public function update(Request $request, $id)
     {
         $request->validate([
             'file_name' => 'required|string|max:255',
-            'file' => 'nullable|file', // Dosen tidak bisa mengubah status verifikasi
+            'file' => 'nullable|file|max:20480', // Dosen tidak bisa mengubah status verifikasi
         ]);
 
         try {
             $userId = Auth::id();
-            // !! PENTING: Validasi kepemilikan dokumen sebelum update
+            // Cari dokumen berdasarkan ID DAN pastikan pemiliknya adalah user yang sedang login
             $document = Document::where('id', $id)->where('user_id', $userId)->firstOrFail();
 
             $accessToken = (new TokenDriveController)->token();
@@ -79,27 +84,22 @@ class DosenDocumentController extends Controller
                 return back()->with('error', 'Gagal mendapatkan token akses.');
             }
 
+            // Logika untuk mengganti file (jika ada)
             if ($request->hasFile('file')) {
+                // ... (logika penggantian file sudah benar)
                 $file = $request->file('file');
                 $newOriginalFileName = $file->getClientOriginalName();
-
-                // 1. Unggah file baru
                 $response = Http::withToken($accessToken)
                     ->attach('metadata', json_encode(['name' => $newOriginalFileName, 'parents' => [$document->folderid]]), 'metadata.json', ['Content-Type' => 'application/json; charset=UTF-8'])
                     ->attach('data', file_get_contents($file->getPathname()), $newOriginalFileName)
                     ->post('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart');
                 $response->throw();
                 $newFileId = $response->json('id');
-
-                // 2. Hapus file lama dari Google Drive
                 Http::withToken($accessToken)->delete("https://www.googleapis.com/drive/v3/files/{$document->fileid}");
-
-                // 3. Perbarui database
                 $document->fileid = $newFileId;
                 $document->name = $newOriginalFileName;
             }
 
-            // Perbarui nama custom di database
             $document->file_name = $request->input('file_name');
             $document->save();
 
@@ -112,11 +112,11 @@ class DosenDocumentController extends Controller
 
     /**
      * Menampilkan pratinjau dokumen milik dosen.
+     * PENTING: Validasi kepemilikan di sini sudah benar dan dipertahankan.
      */
     public function show($id)
     {
         try {
-            // !! PENTING: Validasi kepemilikan dokumen
             $document = Document::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
             $previewUrl = "https://drive.google.com/file/d/{$document->fileid}/view?usp=sharing";
             return redirect()->away($previewUrl);
@@ -127,17 +127,14 @@ class DosenDocumentController extends Controller
 
     /**
      * Mengunduh dokumen milik dosen.
+     * PENTING: Validasi kepemilikan di sini sudah benar dan dipertahankan.
      */
     public function download($id)
     {
         try {
-            // !! PENTING: Validasi kepemilikan dokumen
             $document = Document::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
-
             $accessToken = (new TokenDriveController)->token();
-            if (!$accessToken) {
-                return back()->with('error', 'Gagal mendapatkan token akses.');
-            }
+            if (!$accessToken) return back()->with('error', 'Gagal mendapatkan token akses.');
 
             $client = new \GuzzleHttp\Client();
             $response = $client->get("https://www.googleapis.com/drive/v3/files/{$document->fileid}?alt=media", [
@@ -156,22 +153,16 @@ class DosenDocumentController extends Controller
 
     /**
      * Menghapus dokumen milik dosen.
+     * PENTING: Validasi kepemilikan di sini sudah benar dan dipertahankan.
      */
     public function destroy($id)
     {
         try {
-            // !! PENTING: Validasi kepemilikan dokumen
             $document = Document::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
-
             $accessToken = (new TokenDriveController)->token();
-            if (!$accessToken) {
-                return back()->with('error', 'Gagal mendapatkan token akses.');
-            }
+            if (!$accessToken) return back()->with('error', 'Gagal mendapatkan token akses.');
 
-            // Hapus dari Google Drive
             Http::withToken($accessToken)->delete("https://www.googleapis.com/drive/v3/files/{$document->fileid}");
-
-            // Hapus dari database
             $document->delete();
 
             return back()->with('success', 'File berhasil dihapus.');

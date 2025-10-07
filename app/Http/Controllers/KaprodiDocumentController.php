@@ -4,194 +4,152 @@ namespace App\Http\Controllers;
 
 use App\Models\Document;
 use App\Models\Folder;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-// Pastikan TokenDriveController dapat diakses
-use App\Http\Controllers\TokenDriveController;
 
-/**
- * Controller ini mengatur semua aksi yang dapat dilakukan oleh Kaprodi.
- * Fokus utamanya adalah untuk melihat, mengunduh, dan memverifikasi
- * dokumen milik semua dosen, tanpa hak untuk memodifikasi struktur folder
- * atau mengunggah file baru.
- */
 class KaprodiDocumentController extends Controller
 {
+    // ... (method index tidak berubah) ...
     public function index()
     {
-        // 1. Ambil folder induk (root) milik semua dosen
-        $rootFolders = Folder::select('folders.*', 'users.name as user_name')
-            ->join('users', 'folders.user_id', '=', 'users.id')
-            ->where('users.role', 'dosen')
-            ->whereNull('folders.parent_id')
-            ->orderBy('folders.name')
-            ->orderBy('users.name')
-            ->get();
+        $rootFolders = Folder::whereNull('parent_id')->orderBy('name')->get();
+        $unverifiedCounts = collect();
+        $commentCounts = collect();
 
-        // 2. Ambil SEMUA folder milik dosen dan kelompokkan berdasarkan parent_id untuk pencarian rekursif yang efisien
-        $allDosenFolders = Folder::whereIn('user_id', $rootFolders->pluck('user_id'))->get();
-        $foldersByParent = $allDosenFolders->groupBy('parent_id');
+        if ($rootFolders->isNotEmpty()) {
+            $topLevelFolderIds = $rootFolders->pluck('folder_id');
+            $placeholders = implode(',', array_fill(0, count($topLevelFolderIds), '?'));
 
-        // 3. Untuk setiap folder induk, hitung dokumen yang belum diverifikasi di dalamnya DAN di semua sub-foldernya
-        foreach ($rootFolders as $folder) {
-            // Dapatkan semua ID sub-folder secara rekursif
-            $descendantIds = $this->getDescendantFolderIds($folder->folder_id, $foldersByParent);
+            $cte = "
+                WITH RECURSIVE folder_hierarchy (folder_id, root_id) AS (
+                    SELECT folder_id, folder_id as root_id FROM folders WHERE folder_id IN ($placeholders)
+                    UNION ALL
+                    SELECT f.folder_id, h.root_id FROM folders f JOIN folder_hierarchy h ON f.parent_id = h.folder_id
+                )
+            ";
 
-            // Gabungkan ID folder induk itu sendiri dengan semua ID sub-foldernya
-            $allFolderIds = collect($descendantIds)->push($folder->folder_id);
+            $unverifiedResults = DB::select("{$cte} SELECT h.root_id, COUNT(d.id) as total FROM folder_hierarchy h JOIN documents d ON h.folder_id = d.folderid WHERE d.verified = false GROUP BY h.root_id", $topLevelFolderIds->all());
+            $unverifiedCounts = collect($unverifiedResults)->pluck('total', 'root_id');
 
-            // Hitung dokumen yang belum diverifikasi dari semua folder tersebut
-            $unverifiedCount = Document::whereIn('folderid', $allFolderIds)
-            ->where('user_id', $folder->user_id)
-                ->where('verified', false)
-                ->count();
-
-            // Tambahkan hasil hitungan ke objek folder
-            $folder->unverified_documents_count = $unverifiedCount;
+            $commentResults = DB::select("
+                {$cte}
+                SELECT h.root_id, COUNT(DISTINCT c.document_id) as total
+                FROM folder_hierarchy h
+                JOIN documents d ON h.folder_id = d.folderid
+                JOIN comments c ON d.id = c.document_id
+                GROUP BY h.root_id
+            ", $topLevelFolderIds->all());
+            $commentCounts = collect($commentResults)->pluck('total', 'root_id');
         }
 
-        // 4. Kelompokkan hasilnya berdasarkan nama folder untuk ditampilkan di view
-        $groupedFolders = $rootFolders->groupBy('name');
-
-        return view('kaprodi.dokumen.index', compact('groupedFolders'));
+        return view('kaprodi.dokumen.index', compact('rootFolders', 'unverifiedCounts', 'commentCounts'));
     }
 
     /**
-     * Helper function untuk mendapatkan semua ID sub-folder (keturunan) secara rekursif.
-     *
-     * @param string $parentId ID folder induk
-     * @param \Illuminate\Support\Collection $foldersByParent Koleksi semua folder yang dikelompokkan berdasarkan parent_id
-     * @return array
+     * MODIFIKASI UTAMA DI METHOD INI
      */
-    private function getDescendantFolderIds($parentId, $foldersByParent)
+    public function show($folder_id)
     {
-        $descendants = [];
-        // Cek apakah ada anak dari parentId ini
-        if (!isset($foldersByParent[$parentId])) {
-            return $descendants;
-        }
+        $folder = Folder::where('folder_id', $folder_id)->firstOrFail();
+        $breadcrumbs = $this->getFolderAncestry($folder);
 
-        // Ambil anak-anak langsung
-        $children = $foldersByParent[$parentId];
-
-        foreach ($children as $child) {
-            // Tambahkan ID anak ini ke dalam array
-            $descendants[] = $child->folder_id;
-            // Cari cucu dari anak ini (rekursif) dan gabungkan hasilnya
-            $descendants = array_merge($descendants, $this->getDescendantFolderIds($child->folder_id, $foldersByParent));
-        }
-
-        return $descendants;
-    }
-
-    /**
-     * Menampilkan isi dari sebuah folder spesifik milik seorang dosen.
-     */
-  public function showDosenFolder($dosen_id, $folder_id)
-    {
-        $folder = Folder::with('user')
-            ->where('user_id', $dosen_id)
-            ->where('folder_id', $folder_id)
-            ->firstOrFail();
-
-        $documents = Document::where('folderid', $folder->folder_id)->get();
-
-        // Ambil sub-folder langsung
-        $subfolders = Folder::where('user_id', $dosen_id)
-            ->where('parent_id', $folder->folder_id)
+        $documents = Document::with(['user', 'comments.user'])
+            ->where('folderid', $folder->folder_id)
             ->get();
 
-        // --- Logika Baru untuk Menghitung Notifikasi Sub-folder ---
+        $subfolders = Folder::where('parent_id', $folder->folder_id)->orderBy('name')->get();
+
+        // BARU: Logika untuk menandai subfolder mana yang berisi dokumen berkomentar
+        $subfolderCommentMap = collect();
         if ($subfolders->isNotEmpty()) {
-            $allDosenFolders = Folder::where('user_id', $dosen_id)->get();
-            $foldersByParent = $allDosenFolders->groupBy('parent_id');
+            $subfolderIds = $subfolders->pluck('folder_id');
+            $placeholders = implode(',', array_fill(0, count($subfolderIds), '?'));
 
-            foreach ($subfolders as $subfolder) {
-                $descendantIds = $this->getDescendantFolderIds($subfolder->folder_id, $foldersByParent);
-                $allFolderIds = collect($descendantIds)->push($subfolder->folder_id);
-                $subfolder->unverified_documents_count = Document::whereIn('folderid', $allFolderIds)
-                    ->where('user_id', $dosen_id)
-                    ->where('verified', false)
-                    ->count();
+            // CTE rekursif untuk mencari komentar di dalam setiap pohon sub-folder
+            $cte = "WITH RECURSIVE h (id, root_id) AS (
+                        SELECT folder_id, folder_id FROM folders WHERE folder_id IN ($placeholders)
+                        UNION ALL
+                        SELECT f.folder_id, h.root_id FROM folders f JOIN h ON f.parent_id = h.id
+                    )";
+
+            $results = DB::select("
+                {$cte}
+                SELECT DISTINCT h.root_id
+                FROM h
+                JOIN documents d ON h.id = d.folderid
+                WHERE EXISTS (SELECT 1 FROM comments c WHERE c.document_id = d.id)
+            ", $subfolderIds->all());
+
+            $subfolderCommentMap = collect($results)->pluck('root_id');
+        }
+
+        return view('kaprodi.dokumen.show', compact('folder', 'documents', 'breadcrumbs', 'subfolders', 'subfolderCommentMap'));
+    }
+
+    // ... (sisa method: getFolderAncestry, showUnverified, updateVerification, dll tidak berubah) ...
+    private function getFolderAncestry(Folder $folder)
+    {
+        $breadcrumbs = [];
+        $current = $folder;
+        while ($current && $current->parent_id) {
+            $parent = Folder::where('folder_id', $current->parent_id)->first();
+            if ($parent) {
+                array_unshift($breadcrumbs, $parent);
+                $current = $parent;
+            } else {
+                break;
             }
         }
-
-        return view('kaprodi.dokumen.show', compact('folder', 'documents', 'subfolders'));
+        return $breadcrumbs;
     }
-    /**
-     * Mengubah status verifikasi sebuah dokumen.
-     * Ini adalah satu-satunya aksi "update" yang bisa dilakukan Kaprodi.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id ID dari dokumen di database
-     * @return \Illuminate\Http\RedirectResponse
-     */
+    public function showUnverified()
+    {
+        $unverifiedDocuments = Document::with(['user', 'folder'])
+            ->where('verified', false)
+            ->latest()
+            ->get();
+        return view('kaprodi.dokumen.unverified', compact('unverifiedDocuments'));
+    }
     public function updateVerification(Request $request, $id)
     {
-        $request->validate([
-            'verified' => 'required|boolean',
-        ]);
-
+        $request->validate(['verified' => 'required|boolean']);
         try {
             $document = Document::findOrFail($id);
             $document->verified = $request->input('verified');
             $document->save();
-
             return back()->with('success', 'Status verifikasi dokumen berhasil diperbarui!');
         } catch (\Exception $e) {
             Log::error('Gagal memperbarui verifikasi dokumen: ' . $e->getMessage());
             return back()->with('error', 'Terjadi kesalahan saat memperbarui status verifikasi.');
         }
     }
-
-    /**
-     * Mengarahkan pengguna ke URL pratinjau Google Drive untuk dokumen yang dipilih.
-     *
-     * @param int $id ID dari dokumen di database
-     * @return \Illuminate\Http\RedirectResponse
-     */
     public function previewDocument($id)
     {
         try {
             $document = Document::findOrFail($id);
-            // URL ini memungkinkan pratinjau tanpa perlu login jika file di-share dengan benar
             $previewUrl = "https://drive.google.com/file/d/{$document->fileid}/view?usp=sharing";
             return redirect()->away($previewUrl);
         } catch (\Exception $e) {
             Log::error('Gagal menampilkan pratinjau file: ' . $e->getMessage());
-            return back()->with('error', 'File tidak ditemukan atau terjadi kesalahan.');
+            return back()->with('error', 'File tidak ditemukan.');
         }
     }
-
-    /**
-     * Mengunduh file dokumen dari Google Drive.
-     *
-     * @param int $id ID dari dokumen di database
-     * @return \Symfony\Component\HttpFoundation\StreamedResponse|\Illuminate\Http\RedirectResponse
-     */
     public function downloadDocument($id)
     {
         try {
             $document = Document::findOrFail($id);
             $accessToken = (new TokenDriveController)->token();
-
             if (!$accessToken) {
-                return back()->with('error', 'Gagal mendapatkan token akses Google Drive.');
+                return back()->with('error', 'Gagal mendapatkan token akses.');
             }
-
-            // Menggunakan GuzzleHttp untuk mengambil file
             $client = new \GuzzleHttp\Client();
             $response = $client->get("https://www.googleapis.com/drive/v3/files/{$document->fileid}?alt=media", [
                 'headers' => ['Authorization' => 'Bearer ' . $accessToken],
                 'stream' => true,
             ]);
-
-            $fileName = $document->name; // Menggunakan nama file asli saat diunduh
+            $fileName = $document->name;
             $contentType = $response->getHeaderLine('Content-Type');
-
-            // Mengirim file sebagai stream download ke browser
             return response()->streamDownload(function () use ($response) {
                 $stream = $response->getBody();
                 while (!$stream->eof()) {
@@ -203,20 +161,7 @@ class KaprodiDocumentController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Gagal mengunduh file: ' . $e->getMessage());
-            return back()->with('error', 'File tidak ditemukan atau terjadi kesalahan saat mengunduh.');
+            return back()->with('error', 'Gagal mengunduh file.');
         }
-    }
-
-    public function showUnverified()
-    {
-        // Ambil semua dokumen dengan status verified = false
-        // Eager load relasi 'user' (pemilik) dan 'folder' untuk efisiensi query
-        $unverifiedDocuments = Document::with(['user', 'folder'])
-            ->where('verified', false)
-            ->latest() // Tampilkan yang terbaru di atas
-            ->get();
-
-        // Kirim data ke view baru
-        return view('kaprodi.dokumen.unverified', compact('unverifiedDocuments'));
     }
 }

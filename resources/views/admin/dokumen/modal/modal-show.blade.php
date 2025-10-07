@@ -2,7 +2,7 @@
 {{-- SEMUA MODAL YANG DIPERLUKAN --}}
 {{-- ======================================================================= --}}
 
-<div class="modal fade" id="createFolderModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="createSubfolderModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -40,8 +40,7 @@
                 @csrf
                 <div class="modal-body">
                     <input type="hidden" name="folderid" value="{{ $folder->folder_id }}">
-                    {{-- INPUT BARU: Input tersembunyi untuk user_id pemilik folder --}}
-                    <input type="hidden" name="user_id" value="{{ $folder->user_id }}">
+          <input type="hidden" name="user_id" value="{{ auth()->id() }}">
                     <div class="mb-3">
                         <label for="file_name_upload" class="form-label">Nama Dokumen</label>
                         <input type="text" class="form-control" id="file_name_upload" name="file_name"
@@ -103,7 +102,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <form action="{{ route('admin.subfolder.destroy', $subfolder->id) }}" method="POST">
+                    <form action="{{ route('admin.folder.destroy', $subfolder->id) }}" method="POST">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-danger">Ya, Hapus Permanen</button>

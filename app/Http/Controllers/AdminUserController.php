@@ -43,9 +43,9 @@ class AdminUserController extends Controller
             'role' => $request->role,
         ]);
 
-        if ($user->role === 'dosen') {
-            $this->createDosenFolder($user->id);
-        }
+        // if ($user->role === 'dosen') {
+        //     $this->createDosenFolder($user->id);
+        // }
 
         return redirect()->route('admin.users.index')->with('success', 'User berhasil dibuat!');
     }
@@ -99,33 +99,33 @@ class AdminUserController extends Controller
         return redirect()->route('admin.users.index')->with('success', 'User berhasil dihapus!');
     }
 
-    protected function createDosenFolder($userId)
-    {
-        // ... (kode ini tidak berubah)
-        $folderName = 'Penelitian-Pengabdian';
-        $parentFolderId = null;
+    // protected function createDosenFolder($userId)
+    // {
+    //     // ... (kode ini tidak berubah)
+    //     $folderName = 'Penelitian-Pengabdian';
+    //     $parentFolderId = null;
 
-        // Anda mungkin perlu cara yang lebih baik untuk memanggil controller lain
-        // Daripada `new FolderController()`, pertimbangkan menggunakan dependency injection
-        // atau service class jika aplikasi semakin kompleks.
-        // Untuk saat ini, ini sudah cukup.
-        $folderController = new FolderController();
-        $newFolderId = $folderController->createFolder($folderName, $parentFolderId);
+    //     // Anda mungkin perlu cara yang lebih baik untuk memanggil controller lain
+    //     // Daripada `new FolderController()`, pertimbangkan menggunakan dependency injection
+    //     // atau service class jika aplikasi semakin kompleks.
+    //     // Untuk saat ini, ini sudah cukup.
+    //     $folderController = new FolderController();
+    //     $newFolderId = $folderController->createFolder($folderName, $parentFolderId);
 
-        if (!$newFolderId) {
-            Log::error("Failed to create Google Drive folder for new user (ID: {$userId})");
-            return;
-        }
+    //     if (!$newFolderId) {
+    //         Log::error("Failed to create Google Drive folder for new user (ID: {$userId})");
+    //         return;
+    //     }
 
-        try {
-            $folder = new Folder;
-            $folder->name = $folderName;
-            $folder->folder_id = $newFolderId;
-            $folder->parent_id = $parentFolderId;
-            $folder->user_id = $userId;
-            $folder->save();
-        } catch (\Exception $e) {
-            Log::error("Failed to save folder record to database for user (ID: {$userId}): " . $e->getMessage());
-        }
-    }
+    //     try {
+    //         $folder = new Folder;
+    //         $folder->name = $folderName;
+    //         $folder->folder_id = $newFolderId;
+    //         $folder->parent_id = $parentFolderId;
+    //         $folder->user_id = $userId;
+    //         $folder->save();
+    //     } catch (\Exception $e) {
+    //         Log::error("Failed to save folder record to database for user (ID: {$userId}): " . $e->getMessage());
+    //     }
+    // }
 }

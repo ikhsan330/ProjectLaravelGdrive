@@ -12,7 +12,7 @@ class Folder extends Model
 
     protected $guarded = [];
 
-   public function documents()
+    public function documents()
     {
         // Eloquent's hasMany relationship with custom keys:
         // hasMany(RelatedModel, foreign_key_on_related_model, local_key_on_this_model)
@@ -28,7 +28,7 @@ class Folder extends Model
         return $this->belongsTo(User::class);
     }
 
- public function getTotalFileCount()
+    public function getTotalFileCount()
     {
         // Hitung dokumen di folder saat ini
         $count = $this->documents->count();
@@ -44,9 +44,9 @@ class Folder extends Model
         return $count;
     }
 
-        public function childrenRecursive()
+    public function childrenRecursive()
     {
-       return $this->subfolders()->with('childrenRecursive');
+        return $this->subfolders()->with('childrenRecursive');
     }
 
     public function children()
@@ -54,7 +54,7 @@ class Folder extends Model
         return $this->hasMany(Folder::class, 'parent_id', 'folder_id');
     }
 
-     public function getAllDescendantIdsAndSelf()
+    public function getAllDescendantIdsAndSelf()
     {
         $ids = collect([$this->id]);
 
